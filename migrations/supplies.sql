@@ -1,0 +1,9 @@
+CREATE TABLE supplies (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR NOT NULL,
+    description VARCHAR,
+    price NUMERIC(10,2) NOT NULL,
+    quantity_available INTEGER NOT NULL DEFAULT 0,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

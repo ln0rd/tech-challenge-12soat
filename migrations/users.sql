@@ -1,0 +1,9 @@
+CREATE TABLE "users" (
+    id SERIAL PRIMARY KEY,
+    email VARCHAR NOT NULL,
+    password VARCHAR NOT NULL,
+    username VARCHAR NOT NULL,
+    customer_id VARCHAR NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);

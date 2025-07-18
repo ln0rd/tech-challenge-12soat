@@ -1,7 +1,7 @@
 BINARY_NAME=tech-challenge-12soat
 MAIN_PATH=cmd
 
-.PHONY: all build run clean test lint up down run-bin
+.PHONY: all build run clean test lint setup down run-bin
 
 build:
 	go build -o $(BINARY_NAME) $(MAIN_PATH)/main.go
@@ -19,7 +19,7 @@ clean:
 	go clean
 	rm -f $(BINARY_NAME)
 
-up:
+setup:
 	docker compose up -d
 
 down:

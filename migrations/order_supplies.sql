@@ -1,0 +1,9 @@
+CREATE TABLE order_supplies (
+    id SERIAL PRIMARY KEY,
+    order_id INTEGER NOT NULL,
+    supply_id INTEGER NOT NULL,
+    quantity INTEGER NOT NULL DEFAULT 1,
+    total_value NUMERIC(10,2) NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
