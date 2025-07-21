@@ -6,6 +6,8 @@ import (
 
 	db "github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db"
 	routes "github.com/ln0rd/tech_challenge_12soat/internal/interface/http"
+	"github.com/ln0rd/tech_challenge_12soat/internal/interface/http/controller"
+	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/customer"
 
 	"net/http"
 
@@ -33,14 +35,12 @@ func main() {
 	}
 	defer logger.Sync()
 
-	// Tenta carregar o .env e loga o resultado
 	if err := godotenv.Load(); err != nil {
 		logger.Error("Error loading .env file",
 			zap.Error(err),
 			zap.String("current_dir", getCurrentDir()))
 	} else {
 		logger.Info("Successfully loaded .env file")
-		// Log some env vars to verify they were loaded
 		logger.Debug("Environment variables",
 			zap.String("DB_HOST", os.Getenv("DATABASE_HOST")),
 			zap.String("DB_NAME", os.Getenv("DATABASE_NAME")),
@@ -57,8 +57,17 @@ func main() {
 
 	logger.Info("Initializing the application...")
 	r := mux.NewRouter()
-	rt := routes.NewRouter(logger)
 
+	// Instancia o usecase e a controller do customer
+	createCustomerUC := &customer.CreateCustomer{DB: db.DB}
+	customerController := &controller.CustomerController{
+		Logger:         logger,
+		CreateCustomer: createCustomerUC,
+	}
+
+	healthController := &controller.HealthController{}
+
+	rt := routes.NewRouter(logger, customerController, healthController)
 	rt.SetupRouter(r)
 
 	logger.Info("Server starting", zap.String("port", httpPort))
