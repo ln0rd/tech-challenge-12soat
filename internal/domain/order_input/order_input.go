@@ -1,4 +1,4 @@
-package order_supplies
+package order_input
 
 import (
 	"time"
@@ -6,12 +6,13 @@ import (
 	"github.com/google/uuid"
 )
 
-type OrderSupplie struct {
+type OrderInput struct {
 	ID         uuid.UUID `json:"id"`
 	OrderID    uuid.UUID `json:"order_id"`
-	SupplyID   uuid.UUID `json:"supply_id"`
+	InputID    uuid.UUID `json:"input_id"`
 	Quantity   int       `json:"quantity"`
-	TotalValue float64   `json:"total_value"`
+	UnitPrice  float64   `json:"unit_price"`
+	TotalPrice float64   `json:"total_price"`
 	CreatedAt  time.Time `json:"created_at"`
 	UpdatedAt  time.Time `json:"updated_at"`
 }

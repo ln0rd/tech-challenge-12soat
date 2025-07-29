@@ -1,11 +1,11 @@
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
-CREATE TABLE supplies (
+CREATE TABLE inputs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
     name VARCHAR NOT NULL,
-    description VARCHAR,
-    price NUMERIC(10,2) NOT NULL,
-    quantity_available INTEGER NOT NULL DEFAULT 0,
+    description TEXT,
+    price DECIMAL(10,2) NOT NULL,
+    quantity INTEGER NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

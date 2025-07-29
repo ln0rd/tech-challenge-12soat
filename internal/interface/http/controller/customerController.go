@@ -6,6 +6,8 @@ import (
 	"net/http"
 	"regexp"
 
+	"github.com/google/uuid"
+	"github.com/gorilla/mux"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/costumer"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/customer"
 	"go.uber.org/zap"
@@ -24,8 +26,11 @@ const (
 )
 
 type CustomerController struct {
-	Logger         *zap.Logger
-	CreateCustomer *customer.CreateCustomer
+	Logger             *zap.Logger
+	CreateCustomer     *customer.CreateCustomer
+	FindAllCustomer    *customer.FindAllCustomer
+	FindByIdCustomer   *customer.FindByIdCustomer
+	DeleteByIdCustomer *customer.DeleteByIdCustomer
 }
 
 type CustomerDTO struct {
@@ -38,19 +43,19 @@ type CustomerDTO struct {
 
 func (dto *CustomerDTO) Validate() error {
 	if !nameRegex.MatchString(dto.Name) {
-		return errors.New("nome inválido: apenas letras e espaços, até 255 caracteres")
+		return errors.New("invalid name: only letters and spaces, up to 255 characters")
 	}
 	if !emailRegex.MatchString(dto.Email) {
-		return errors.New("email inválido")
+		return errors.New("invalid email")
 	}
 	if !userIDRegex.MatchString(dto.UserID) {
-		return errors.New("userID deve conter apenas letras e números")
+		return errors.New("userID must contain only letters and numbers")
 	}
 	if !documentNumberReg.MatchString(dto.DocumentNumber) {
-		return errors.New("documentNumber deve conter apenas números e no máximo 50 caracteres")
+		return errors.New("documentNumber must contain only numbers and up to 50 characters")
 	}
 	if dto.CustomerType != CustomerTypeLegal && dto.CustomerType != CustomerTypeNatural {
-		return errors.New("customerType deve ser 'legal_person' ou 'natural_person'")
+		return errors.New("customerType must be 'legal_person' or 'natural_person'")
 	}
 	return nil
 }
@@ -58,8 +63,8 @@ func (dto *CustomerDTO) Validate() error {
 func (cc *CustomerController) Create(w http.ResponseWriter, r *http.Request) {
 	var dto CustomerDTO
 	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
-		cc.Logger.Error("Erro ao decodificar JSON", zap.Error(err))
-		http.Error(w, "Dados inválidos", http.StatusBadRequest)
+		cc.Logger.Error("Error decoding JSON", zap.Error(err))
+		http.Error(w, "Invalid data", http.StatusBadRequest)
 		return
 	}
 
@@ -78,11 +83,68 @@ func (cc *CustomerController) Create(w http.ResponseWriter, r *http.Request) {
 
 	err := cc.CreateCustomer.Process(entity)
 	if err != nil {
-		cc.Logger.Error("Erro ao criar customer", zap.Error(err))
-		http.Error(w, "Erro ao criar customer", http.StatusInternalServerError)
+		cc.Logger.Error("Error creating customer", zap.Error(err))
+		http.Error(w, "Error creating customer", http.StatusInternalServerError)
 		return
 	}
 
 	w.WriteHeader(http.StatusCreated)
-	json.NewEncoder(w).Encode(map[string]string{"message": "Customer criado com sucesso"})
+	json.NewEncoder(w).Encode(map[string]string{"message": "Customer created successfully"})
+}
+
+func (cc *CustomerController) FindAll(w http.ResponseWriter, r *http.Request) {
+	customers, err := cc.FindAllCustomer.Process()
+	if err != nil {
+		cc.Logger.Error("Error finding all customers", zap.Error(err))
+		http.Error(w, "Error retrieving customers", http.StatusInternalServerError)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(customers)
+}
+
+func (cc *CustomerController) FindById(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := uuid.Parse(vars["id"])
+	if err != nil {
+		cc.Logger.Error("Error parsing UUID", zap.Error(err))
+		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		return
+	}
+
+	customer, err := cc.FindByIdCustomer.Process(id)
+	if err != nil {
+		cc.Logger.Error("Error finding customer by ID", zap.Error(err), zap.String("id", id.String()))
+		http.Error(w, "Customer not found", http.StatusNotFound)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(customer)
+}
+
+func (cc *CustomerController) UpdateById(w http.ResponseWriter, r *http.Request) {
+
+}
+
+func (cc *CustomerController) DeleteById(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := uuid.Parse(vars["id"])
+	if err != nil {
+		cc.Logger.Error("Error parsing UUID", zap.Error(err))
+		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		return
+	}
+
+	err = cc.DeleteByIdCustomer.Process(id)
+	if err != nil {
+		cc.Logger.Error("Error deleting customer by ID", zap.Error(err), zap.String("id", id.String()))
+		http.Error(w, "Customer not found", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
 }

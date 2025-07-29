@@ -58,14 +58,7 @@ func main() {
 	logger.Info("Initializing the application...")
 	r := mux.NewRouter()
 
-	// Instancia o usecase e a controller do customer
-	createCustomerUC := &customer.CreateCustomer{DB: db.DB}
-	customerController := &controller.CustomerController{
-		Logger:         logger,
-		CreateCustomer: createCustomerUC,
-	}
-
-	healthController := &controller.HealthController{}
+	customerController, healthController := InitInstances()
 
 	rt := routes.NewRouter(logger, customerController, healthController)
 	rt.SetupRouter(r)
@@ -81,4 +74,23 @@ func getCurrentDir() string {
 		return "error getting current dir"
 	}
 	return dir
+}
+
+func InitInstances() (*controller.CustomerController, *controller.HealthController) {
+	createCustomerUC := &customer.CreateCustomer{DB: db.DB}
+	findAllCustomerUC := &customer.FindAllCustomer{DB: db.DB}
+	findByIdCustomerUC := &customer.FindByIdCustomer{DB: db.DB}
+	deleteByIdCustomerUC := &customer.DeleteByIdCustomer{DB: db.DB}
+
+	customerController := &controller.CustomerController{
+		Logger:             logger,
+		CreateCustomer:     createCustomerUC,
+		FindAllCustomer:    findAllCustomerUC,
+		FindByIdCustomer:   findByIdCustomerUC,
+		DeleteByIdCustomer: deleteByIdCustomerUC,
+	}
+
+	healthController := &controller.HealthController{}
+
+	return customerController, healthController
 }

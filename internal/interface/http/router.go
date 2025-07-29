@@ -29,4 +29,7 @@ func (r *Router) SetupRouter(router *mux.Router) {
 
 	router.HandleFunc("/healthz", r.healthController.Healthz).Methods("GET")
 	router.HandleFunc("/customer", r.customerController.Create).Methods("POST")
+	router.HandleFunc("/customer", r.customerController.FindAll).Methods("GET")
+	router.HandleFunc("/customer/{id}", r.customerController.FindById).Methods("GET")
+	router.HandleFunc("/customer/{id}", r.customerController.DeleteById).Methods("DELETE")
 }
