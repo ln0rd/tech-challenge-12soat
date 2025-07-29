@@ -31,6 +31,7 @@ type CustomerController struct {
 	FindAllCustomer    *customer.FindAllCustomer
 	FindByIdCustomer   *customer.FindByIdCustomer
 	DeleteByIdCustomer *customer.DeleteByIdCustomer
+	UpdateByIdCustomer *customer.UpdateByIdCustomer
 }
 
 type CustomerDTO struct {
@@ -127,7 +128,43 @@ func (cc *CustomerController) FindById(w http.ResponseWriter, r *http.Request) {
 }
 
 func (cc *CustomerController) UpdateById(w http.ResponseWriter, r *http.Request) {
+	vars := mux.Vars(r)
+	id, err := uuid.Parse(vars["id"])
+	if err != nil {
+		cc.Logger.Error("Error parsing UUID", zap.Error(err))
+		http.Error(w, "Invalid ID format", http.StatusBadRequest)
+		return
+	}
 
+	var dto CustomerDTO
+	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
+		cc.Logger.Error("Error decoding JSON", zap.Error(err))
+		http.Error(w, "Invalid data", http.StatusBadRequest)
+		return
+	}
+
+	if err := dto.Validate(); err != nil {
+		http.Error(w, err.Error(), http.StatusBadRequest)
+		return
+	}
+
+	entity := &domain.Customer{
+		Name:           dto.Name,
+		Email:          dto.Email,
+		UserID:         dto.UserID,
+		DocumentNumber: dto.DocumentNumber,
+		CustomerType:   dto.CustomerType,
+	}
+
+	err = cc.UpdateByIdCustomer.Process(id, entity)
+	if err != nil {
+		cc.Logger.Error("Error updating customer by ID", zap.Error(err), zap.String("id", id.String()))
+		http.Error(w, "Customer not found", http.StatusNotFound)
+		return
+	}
+
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Customer updated successfully"})
 }
 
 func (cc *CustomerController) DeleteById(w http.ResponseWriter, r *http.Request) {

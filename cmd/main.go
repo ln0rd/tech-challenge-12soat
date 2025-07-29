@@ -77,10 +77,12 @@ func getCurrentDir() string {
 }
 
 func InitInstances() (*controller.CustomerController, *controller.HealthController) {
+	// Instancia o usecase e a controller do customer
 	createCustomerUC := &customer.CreateCustomer{DB: db.DB}
 	findAllCustomerUC := &customer.FindAllCustomer{DB: db.DB}
 	findByIdCustomerUC := &customer.FindByIdCustomer{DB: db.DB}
 	deleteByIdCustomerUC := &customer.DeleteByIdCustomer{DB: db.DB}
+	updateByIdCustomerUC := &customer.UpdateByIdCustomer{DB: db.DB}
 
 	customerController := &controller.CustomerController{
 		Logger:             logger,
@@ -88,6 +90,7 @@ func InitInstances() (*controller.CustomerController, *controller.HealthControll
 		FindAllCustomer:    findAllCustomerUC,
 		FindByIdCustomer:   findByIdCustomerUC,
 		DeleteByIdCustomer: deleteByIdCustomerUC,
+		UpdateByIdCustomer: updateByIdCustomerUC,
 	}
 
 	healthController := &controller.HealthController{}
