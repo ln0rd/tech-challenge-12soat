@@ -13,15 +13,17 @@ type Router struct {
 	logger             *zap.Logger
 	customerController *controller.CustomerController
 	userController     *controller.UserController
+	authController     *controller.AuthController
 	healthController   *controller.HealthController
 }
 
-func NewRouter(logger *zap.Logger, customerController *controller.CustomerController, userController *controller.UserController, healthController *controller.HealthController) *Router {
+func NewRouter(logger *zap.Logger, customerController *controller.CustomerController, userController *controller.UserController, authController *controller.AuthController, healthController *controller.HealthController) *Router {
 	return &Router{
 		router:             mux.NewRouter(),
 		logger:             logger,
 		customerController: customerController,
 		userController:     userController,
+		authController:     authController,
 		healthController:   healthController,
 	}
 }
@@ -33,6 +35,9 @@ func (r *Router) SetupRouter(router *mux.Router) {
 
 	router.HandleFunc("/healthz", r.healthController.Healthz).Methods("GET")
 	r.logger.Info("Route registered: GET /healthz")
+
+	router.HandleFunc("/auth/login", r.authController.Login).Methods("POST")
+	r.logger.Info("Route registered: POST /auth/login")
 
 	router.HandleFunc("/customer", r.customerController.Create).Methods("POST")
 	r.logger.Info("Route registered: POST /customer")

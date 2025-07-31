@@ -4,6 +4,7 @@ import (
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/user"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
+	"golang.org/x/crypto/bcrypt"
 	"gorm.io/gorm"
 )
 
@@ -14,6 +15,16 @@ type CreateUser struct {
 
 func (uc *CreateUser) Process(entity *domain.User) error {
 	uc.Logger.Info("Processing user creation", zap.String("email", entity.Email))
+
+	// Hash da senha
+	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(entity.Password), bcrypt.DefaultCost)
+	if err != nil {
+		uc.Logger.Error("Error hashing password", zap.Error(err))
+		return err
+	}
+
+	// Atualiza a senha com o hash
+	entity.Password = string(hashedPassword)
 
 	model := persistence.UserPersistence{}.ToModel(entity)
 

@@ -4,9 +4,11 @@ import (
 	"log"
 	"os"
 
+	authInfra "github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/auth"
 	db "github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db"
 	routes "github.com/ln0rd/tech_challenge_12soat/internal/interface/http"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/http/controller"
+	authUseCase "github.com/ln0rd/tech_challenge_12soat/internal/usecase/auth"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/customer"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/user"
 
@@ -61,9 +63,9 @@ func main() {
 	logger.Info("Initializing the application...")
 	r := mux.NewRouter()
 
-	customerController, healthController, userController := InitInstances()
+	customerController, healthController, userController, authController := InitInstances()
 
-	rt := routes.NewRouter(logger, customerController, userController, healthController)
+	rt := routes.NewRouter(logger, customerController, userController, authController, healthController)
 	rt.SetupRouter(r)
 
 	logger.Info("Server starting", zap.String("port", httpPort))
@@ -79,7 +81,7 @@ func getCurrentDir() string {
 	return dir
 }
 
-func InitInstances() (*controller.CustomerController, *controller.HealthController, *controller.UserController) {
+func InitInstances() (*controller.CustomerController, *controller.HealthController, *controller.UserController, *controller.AuthController) {
 	createCustomerUC := &customer.CreateCustomer{DB: db.DB, Logger: logger}
 	findAllCustomerUC := &customer.FindAllCustomer{DB: db.DB, Logger: logger}
 	findByIdCustomerUC := &customer.FindByIdCustomer{DB: db.DB, Logger: logger}
@@ -101,7 +103,17 @@ func InitInstances() (*controller.CustomerController, *controller.HealthControll
 		CreateUser: createUserUC,
 	}
 
+	// Auth components
+	authRepository := authInfra.NewAuthRepository(db.DB, logger)
+	jwtService := authInfra.NewJWTService(logger)
+	loginUseCase := authUseCase.NewLoginUseCase(authRepository, jwtService, logger)
+
+	authController := &controller.AuthController{
+		Logger:       logger,
+		LoginUseCase: loginUseCase,
+	}
+
 	healthController := &controller.HealthController{}
 
-	return customerController, healthController, userController
+	return customerController, healthController, userController, authController
 }
