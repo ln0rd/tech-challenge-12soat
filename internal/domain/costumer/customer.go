@@ -1,4 +1,4 @@
-package domain
+package costumer
 
 import (
 	"time"
@@ -9,8 +9,6 @@ import (
 type Customer struct {
 	ID             uuid.UUID `json:"id"`
 	Name           string    `json:"name"`
-	Email          string    `json:"email"`
-	UserID         string    `json:"user_id"`
 	DocumentNumber string    `json:"document_number"`
 	CustomerType   string    `json:"customer_type"`
 	CreatedAt      time.Time `json:"created_at"`

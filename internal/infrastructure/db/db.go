@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
 	"go.uber.org/zap"
 	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
@@ -44,5 +45,15 @@ func InitDB(logger *zap.Logger) {
 	}
 
 	logger.Info("Successfully connected to database")
+
+	logger.Info("Running auto-migration")
+	err = db.AutoMigrate(&models.User{}, &models.Customer{})
+	if err != nil {
+		logger.Error("Failed to run auto-migration", zap.Error(err))
+		return
+	}
+
+	logger.Info("Auto-migration completed successfully")
+
 	DB = db
 }

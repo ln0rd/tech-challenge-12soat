@@ -15,8 +15,6 @@ import (
 
 var (
 	nameRegex         = regexp.MustCompile(`^[A-Za-zÀ-ÿãõÃÕ\s]{1,255}$`)
-	emailRegex        = regexp.MustCompile(`^[\w._%+-]+@[\w.-]+\.[a-zA-Z]{2,}$`)
-	userIDRegex       = regexp.MustCompile(`^[a-zA-Z0-9]+$`)
 	documentNumberReg = regexp.MustCompile(`^[0-9]{1,50}$`)
 )
 
@@ -36,8 +34,6 @@ type CustomerController struct {
 
 type CustomerDTO struct {
 	Name           string `json:"name"`
-	Email          string `json:"email"`
-	UserID         string `json:"user_id"`
 	DocumentNumber string `json:"document_number"`
 	CustomerType   string `json:"customer_type"`
 }
@@ -45,12 +41,6 @@ type CustomerDTO struct {
 func (dto *CustomerDTO) Validate() error {
 	if !nameRegex.MatchString(dto.Name) {
 		return errors.New("invalid name: only letters and spaces, up to 255 characters")
-	}
-	if !emailRegex.MatchString(dto.Email) {
-		return errors.New("invalid email")
-	}
-	if !userIDRegex.MatchString(dto.UserID) {
-		return errors.New("userID must contain only letters and numbers")
 	}
 	if !documentNumberReg.MatchString(dto.DocumentNumber) {
 		return errors.New("documentNumber must contain only numbers and up to 50 characters")
@@ -62,6 +52,8 @@ func (dto *CustomerDTO) Validate() error {
 }
 
 func (cc *CustomerController) Create(w http.ResponseWriter, r *http.Request) {
+	cc.Logger.Info("=== CUSTOMER CREATE ENDPOINT CALLED ===")
+
 	var dto CustomerDTO
 	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
 		cc.Logger.Error("Error decoding JSON", zap.Error(err))
@@ -69,19 +61,30 @@ func (cc *CustomerController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	cc.Logger.Info("Received customer creation request",
+		zap.String("name", dto.Name),
+		zap.String("documentNumber", dto.DocumentNumber),
+		zap.String("customerType", dto.CustomerType))
+
 	if err := dto.Validate(); err != nil {
+		cc.Logger.Error("Validation failed", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	cc.Logger.Info("Validation passed")
+
 	entity := &domain.Customer{
 		Name:           dto.Name,
-		Email:          dto.Email,
-		UserID:         dto.UserID,
 		DocumentNumber: dto.DocumentNumber,
 		CustomerType:   dto.CustomerType,
 	}
 
+	cc.Logger.Info("Entity created",
+		zap.String("name", entity.Name),
+		zap.String("documentNumber", entity.DocumentNumber))
+
+	cc.Logger.Info("Calling CreateCustomer.Process...")
 	err := cc.CreateCustomer.Process(entity)
 	if err != nil {
 		cc.Logger.Error("Error creating customer", zap.Error(err))
@@ -89,11 +92,16 @@ func (cc *CustomerController) Create(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	cc.Logger.Info("Customer created successfully", zap.String("name", entity.Name))
+
 	w.WriteHeader(http.StatusCreated)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Customer created successfully"})
 }
 
 func (cc *CustomerController) FindAll(w http.ResponseWriter, r *http.Request) {
+	cc.Logger.Info("=== CUSTOMER FIND ALL ENDPOINT CALLED ===")
+
+	cc.Logger.Info("Calling FindAllCustomer.Process...")
 	customers, err := cc.FindAllCustomer.Process()
 	if err != nil {
 		cc.Logger.Error("Error finding all customers", zap.Error(err))
@@ -101,12 +109,16 @@ func (cc *CustomerController) FindAll(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	cc.Logger.Info("Successfully retrieved customers", zap.Int("count", len(customers)))
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(customers)
 }
 
 func (cc *CustomerController) FindById(w http.ResponseWriter, r *http.Request) {
+	cc.Logger.Info("=== CUSTOMER FIND BY ID ENDPOINT CALLED ===")
+
 	vars := mux.Vars(r)
 	id, err := uuid.Parse(vars["id"])
 	if err != nil {
@@ -115,6 +127,9 @@ func (cc *CustomerController) FindById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	cc.Logger.Info("Parsed customer ID", zap.String("id", id.String()))
+
+	cc.Logger.Info("Calling FindByIdCustomer.Process...")
 	customer, err := cc.FindByIdCustomer.Process(id)
 	if err != nil {
 		cc.Logger.Error("Error finding customer by ID", zap.Error(err), zap.String("id", id.String()))
@@ -122,12 +137,16 @@ func (cc *CustomerController) FindById(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	cc.Logger.Info("Successfully found customer", zap.String("id", customer.ID.String()), zap.String("name", customer.Name))
+
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(customer)
 }
 
 func (cc *CustomerController) UpdateById(w http.ResponseWriter, r *http.Request) {
+	cc.Logger.Info("=== CUSTOMER UPDATE BY ID ENDPOINT CALLED ===")
+
 	vars := mux.Vars(r)
 	id, err := uuid.Parse(vars["id"])
 	if err != nil {
@@ -135,6 +154,8 @@ func (cc *CustomerController) UpdateById(w http.ResponseWriter, r *http.Request)
 		http.Error(w, "Invalid ID format", http.StatusBadRequest)
 		return
 	}
+
+	cc.Logger.Info("Parsed customer ID", zap.String("id", id.String()))
 
 	var dto CustomerDTO
 	if err := json.NewDecoder(r.Body).Decode(&dto); err != nil {
@@ -143,19 +164,30 @@ func (cc *CustomerController) UpdateById(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	cc.Logger.Info("Received customer update request",
+		zap.String("name", dto.Name),
+		zap.String("documentNumber", dto.DocumentNumber),
+		zap.String("customerType", dto.CustomerType))
+
 	if err := dto.Validate(); err != nil {
+		cc.Logger.Error("Validation failed", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
 
+	cc.Logger.Info("Validation passed")
+
 	entity := &domain.Customer{
 		Name:           dto.Name,
-		Email:          dto.Email,
-		UserID:         dto.UserID,
 		DocumentNumber: dto.DocumentNumber,
 		CustomerType:   dto.CustomerType,
 	}
 
+	cc.Logger.Info("Entity created",
+		zap.String("name", entity.Name),
+		zap.String("documentNumber", entity.DocumentNumber))
+
+	cc.Logger.Info("Calling UpdateByIdCustomer.Process...")
 	err = cc.UpdateByIdCustomer.Process(id, entity)
 	if err != nil {
 		cc.Logger.Error("Error updating customer by ID", zap.Error(err), zap.String("id", id.String()))
@@ -163,11 +195,15 @@ func (cc *CustomerController) UpdateById(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	cc.Logger.Info("Customer updated successfully", zap.String("id", id.String()))
+
 	w.WriteHeader(http.StatusOK)
 	json.NewEncoder(w).Encode(map[string]string{"message": "Customer updated successfully"})
 }
 
 func (cc *CustomerController) DeleteById(w http.ResponseWriter, r *http.Request) {
+	cc.Logger.Info("=== CUSTOMER DELETE BY ID ENDPOINT CALLED ===")
+
 	vars := mux.Vars(r)
 	id, err := uuid.Parse(vars["id"])
 	if err != nil {
@@ -176,6 +212,9 @@ func (cc *CustomerController) DeleteById(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
+	cc.Logger.Info("Parsed customer ID", zap.String("id", id.String()))
+
+	cc.Logger.Info("Calling DeleteByIdCustomer.Process...")
 	err = cc.DeleteByIdCustomer.Process(id)
 	if err != nil {
 		cc.Logger.Error("Error deleting customer by ID", zap.Error(err), zap.String("id", id.String()))
@@ -183,5 +222,7 @@ func (cc *CustomerController) DeleteById(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
+	cc.Logger.Info("Customer deleted successfully", zap.String("id", id.String()))
+
+	w.WriteHeader(http.StatusNoContent)
 }

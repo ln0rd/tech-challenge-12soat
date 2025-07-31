@@ -8,10 +8,10 @@ import (
 	routes "github.com/ln0rd/tech_challenge_12soat/internal/interface/http"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/http/controller"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/customer"
+	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/user"
 
 	"net/http"
 
-	"github.com/gorilla/handlers"
 	"github.com/gorilla/mux"
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
@@ -34,6 +34,9 @@ func main() {
 		panic(err)
 	}
 	defer logger.Sync()
+
+	// Define o logger global
+	zap.ReplaceGlobals(logger)
 
 	if err := godotenv.Load(); err != nil {
 		logger.Error("Error loading .env file",
@@ -58,14 +61,14 @@ func main() {
 	logger.Info("Initializing the application...")
 	r := mux.NewRouter()
 
-	customerController, healthController := InitInstances()
+	customerController, healthController, userController := InitInstances()
 
-	rt := routes.NewRouter(logger, customerController, healthController)
+	rt := routes.NewRouter(logger, customerController, userController, healthController)
 	rt.SetupRouter(r)
 
 	logger.Info("Server starting", zap.String("port", httpPort))
 
-	log.Fatal(http.ListenAndServe(":"+httpPort, handlers.CORS(handlers.AllowedOrigins([]string{"*"}))(r)))
+	log.Fatal(http.ListenAndServe(":"+httpPort, r))
 }
 
 func getCurrentDir() string {
@@ -76,13 +79,12 @@ func getCurrentDir() string {
 	return dir
 }
 
-func InitInstances() (*controller.CustomerController, *controller.HealthController) {
-	// Instancia o usecase e a controller do customer
-	createCustomerUC := &customer.CreateCustomer{DB: db.DB}
-	findAllCustomerUC := &customer.FindAllCustomer{DB: db.DB}
-	findByIdCustomerUC := &customer.FindByIdCustomer{DB: db.DB}
-	deleteByIdCustomerUC := &customer.DeleteByIdCustomer{DB: db.DB}
-	updateByIdCustomerUC := &customer.UpdateByIdCustomer{DB: db.DB}
+func InitInstances() (*controller.CustomerController, *controller.HealthController, *controller.UserController) {
+	createCustomerUC := &customer.CreateCustomer{DB: db.DB, Logger: logger}
+	findAllCustomerUC := &customer.FindAllCustomer{DB: db.DB, Logger: logger}
+	findByIdCustomerUC := &customer.FindByIdCustomer{DB: db.DB, Logger: logger}
+	deleteByIdCustomerUC := &customer.DeleteByIdCustomer{DB: db.DB, Logger: logger}
+	updateByIdCustomerUC := &customer.UpdateByIdCustomer{DB: db.DB, Logger: logger}
 
 	customerController := &controller.CustomerController{
 		Logger:             logger,
@@ -93,7 +95,13 @@ func InitInstances() (*controller.CustomerController, *controller.HealthControll
 		UpdateByIdCustomer: updateByIdCustomerUC,
 	}
 
+	createUserUC := &user.CreateUser{DB: db.DB, Logger: logger}
+	userController := &controller.UserController{
+		Logger:     logger,
+		CreateUser: createUserUC,
+	}
+
 	healthController := &controller.HealthController{}
 
-	return customerController, healthController
+	return customerController, healthController, userController
 }

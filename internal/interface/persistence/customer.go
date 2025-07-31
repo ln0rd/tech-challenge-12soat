@@ -14,8 +14,6 @@ func (CustomerPersistence) ToEntity(model *models.Customer) *domain.Customer {
 	return &domain.Customer{
 		ID:             model.ID,
 		Name:           model.Name,
-		Email:          model.Email,
-		UserID:         model.UserID,
 		DocumentNumber: model.DocumentNumber,
 		CustomerType:   model.CustomerType,
 		CreatedAt:      model.CreatedAt,
@@ -30,8 +28,6 @@ func (CustomerPersistence) ToModel(entity *domain.Customer) *models.Customer {
 	return &models.Customer{
 		ID:             entity.ID,
 		Name:           entity.Name,
-		Email:          entity.Email,
-		UserID:         entity.UserID,
 		DocumentNumber: entity.DocumentNumber,
 		CustomerType:   entity.CustomerType,
 		CreatedAt:      entity.CreatedAt,

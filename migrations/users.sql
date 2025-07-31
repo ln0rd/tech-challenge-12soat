@@ -5,7 +5,8 @@ CREATE TABLE "users" (
     email VARCHAR NOT NULL,
     password VARCHAR NOT NULL,
     username VARCHAR NOT NULL,
-    customer_id UUID NOT NULL,
+    user_type VARCHAR NOT NULL,
+    customer_id UUID,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
