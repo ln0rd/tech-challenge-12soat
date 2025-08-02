@@ -17,6 +17,7 @@ func (InputPersistence) ToEntity(model *models.Input) *domain.Input {
 		Description: model.Description,
 		Price:       model.Price,
 		Quantity:    model.Quantity,
+		InputType:   model.InputType,
 		CreatedAt:   model.CreatedAt,
 		UpdatedAt:   model.UpdatedAt,
 	}
@@ -32,6 +33,7 @@ func (InputPersistence) ToModel(entity *domain.Input) *models.Input {
 		Description: entity.Description,
 		Price:       entity.Price,
 		Quantity:    entity.Quantity,
+		InputType:   entity.InputType,
 		CreatedAt:   entity.CreatedAt,
 		UpdatedAt:   entity.UpdatedAt,
 	}

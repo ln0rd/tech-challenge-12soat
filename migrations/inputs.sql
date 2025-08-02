@@ -2,10 +2,11 @@ CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
 CREATE TABLE inputs (
     id UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    name VARCHAR NOT NULL,
+    name VARCHAR NOT NULL UNIQUE,
     description TEXT,
     price DECIMAL(10,2) NOT NULL,
     quantity INTEGER NOT NULL,
+    input_type VARCHAR NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );

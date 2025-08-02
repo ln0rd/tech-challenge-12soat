@@ -47,7 +47,7 @@ func InitDB(logger *zap.Logger) {
 	logger.Info("Successfully connected to database")
 
 	logger.Info("Running auto-migration")
-	err = db.AutoMigrate(&models.User{}, &models.Customer{}, &models.Vehicle{})
+	err = db.AutoMigrate(&models.User{}, &models.Customer{}, &models.Vehicle{}, &models.Input{})
 	if err != nil {
 		logger.Error("Failed to run auto-migration", zap.Error(err))
 		return
