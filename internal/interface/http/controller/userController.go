@@ -70,7 +70,6 @@ func (uc *UserController) Create(w http.ResponseWriter, r *http.Request) {
 		zap.Any("customerID", dto.CustomerID))
 
 	if err := dto.Validate(); err != nil {
-		uc.Logger.Error("Validation failed", zap.Error(err))
 		http.Error(w, err.Error(), http.StatusBadRequest)
 		return
 	}
@@ -108,6 +107,13 @@ func (uc *UserController) Create(w http.ResponseWriter, r *http.Request) {
 	err := uc.CreateUser.Process(entity)
 	if err != nil {
 		uc.Logger.Error("Error creating user", zap.Error(err))
+
+		// Tratamento específico para email duplicado
+		if err.Error() == "email already exists" {
+			http.Error(w, "Email already exists", http.StatusConflict)
+			return
+		}
+
 		http.Error(w, "Error creating user", http.StatusInternalServerError)
 		return
 	}

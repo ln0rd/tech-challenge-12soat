@@ -8,6 +8,7 @@ import (
 	db "github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db"
 	routes "github.com/ln0rd/tech_challenge_12soat/internal/interface/http"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/http/controller"
+	"github.com/ln0rd/tech_challenge_12soat/internal/interface/http/middleware"
 	authUseCase "github.com/ln0rd/tech_challenge_12soat/internal/usecase/auth"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/customer"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/user"
@@ -63,9 +64,9 @@ func main() {
 	logger.Info("Initializing the application...")
 	r := mux.NewRouter()
 
-	customerController, healthController, userController, authController := InitInstances()
+	customerController, healthController, userController, authController, authMiddleware := InitInstances()
 
-	rt := routes.NewRouter(logger, customerController, userController, authController, healthController)
+	rt := routes.NewRouter(logger, customerController, userController, authController, healthController, authMiddleware)
 	rt.SetupRouter(r)
 
 	logger.Info("Server starting", zap.String("port", httpPort))
@@ -81,7 +82,7 @@ func getCurrentDir() string {
 	return dir
 }
 
-func InitInstances() (*controller.CustomerController, *controller.HealthController, *controller.UserController, *controller.AuthController) {
+func InitInstances() (*controller.CustomerController, *controller.HealthController, *controller.UserController, *controller.AuthController, *middleware.AuthMiddleware) {
 	createCustomerUC := &customer.CreateCustomer{DB: db.DB, Logger: logger}
 	findAllCustomerUC := &customer.FindAllCustomer{DB: db.DB, Logger: logger}
 	findByIdCustomerUC := &customer.FindByIdCustomer{DB: db.DB, Logger: logger}
@@ -113,7 +114,10 @@ func InitInstances() (*controller.CustomerController, *controller.HealthControll
 		LoginUseCase: loginUseCase,
 	}
 
+	// Auth middleware
+	authMiddleware := middleware.NewAuthMiddleware(jwtService, logger)
+
 	healthController := &controller.HealthController{}
 
-	return customerController, healthController, userController, authController
+	return customerController, healthController, userController, authController, authMiddleware
 }

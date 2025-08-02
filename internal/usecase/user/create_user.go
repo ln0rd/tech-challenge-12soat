@@ -1,7 +1,10 @@
 package user
 
 import (
+	"errors"
+
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/user"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
@@ -15,6 +18,18 @@ type CreateUser struct {
 
 func (uc *CreateUser) Process(entity *domain.User) error {
 	uc.Logger.Info("Processing user creation", zap.String("email", entity.Email))
+
+	// Verifica se o email já existe
+	var existingUser models.User
+	if err := uc.DB.Where("email = ?", entity.Email).First(&existingUser).Error; err == nil {
+		uc.Logger.Error("Email already exists", zap.String("email", entity.Email))
+		return errors.New("email already exists")
+	} else if err != gorm.ErrRecordNotFound {
+		uc.Logger.Error("Error checking email uniqueness", zap.Error(err))
+		return err
+	}
+
+	uc.Logger.Info("Email is unique", zap.String("email", entity.Email))
 
 	// Hash da senha
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(entity.Password), bcrypt.DefaultCost)
