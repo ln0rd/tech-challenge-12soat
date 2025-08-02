@@ -15,6 +15,7 @@ func (OrderPersistence) ToEntity(model *models.Order) *domain.Order {
 		ID:         model.ID,
 		CustomerID: model.CustomerID,
 		VehicleID:  model.VehicleID,
+		Status:     model.Status,
 		CreatedAt:  model.CreatedAt,
 		UpdatedAt:  model.UpdatedAt,
 	}
@@ -28,6 +29,7 @@ func (OrderPersistence) ToModel(entity *domain.Order) *models.Order {
 		ID:         entity.ID,
 		CustomerID: entity.CustomerID,
 		VehicleID:  entity.VehicleID,
+		Status:     entity.Status,
 		CreatedAt:  entity.CreatedAt,
 		UpdatedAt:  entity.UpdatedAt,
 	}

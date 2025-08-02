@@ -19,10 +19,11 @@ type Router struct {
 	healthController   *controller.HealthController
 	vehicleController  *controller.VehicleController
 	inputController    *controller.InputController
+	orderController    *controller.OrderController
 	authMiddleware     *middleware.AuthMiddleware
 }
 
-func NewRouter(logger *zap.Logger, customerController *controller.CustomerController, userController *controller.UserController, authController *controller.AuthController, healthController *controller.HealthController, vehicleController *controller.VehicleController, inputController *controller.InputController, authMiddleware *middleware.AuthMiddleware) *Router {
+func NewRouter(logger *zap.Logger, customerController *controller.CustomerController, userController *controller.UserController, authController *controller.AuthController, healthController *controller.HealthController, vehicleController *controller.VehicleController, inputController *controller.InputController, orderController *controller.OrderController, authMiddleware *middleware.AuthMiddleware) *Router {
 	return &Router{
 		router:             mux.NewRouter(),
 		logger:             logger,
@@ -32,6 +33,7 @@ func NewRouter(logger *zap.Logger, customerController *controller.CustomerContro
 		healthController:   healthController,
 		vehicleController:  vehicleController,
 		inputController:    inputController,
+		orderController:    orderController,
 		authMiddleware:     authMiddleware,
 	}
 }
@@ -98,6 +100,22 @@ func (r *Router) SetupRouter(router *mux.Router) {
 
 	router.Handle("/input/{id}", r.authMiddleware.Authenticate(http.HandlerFunc(r.inputController.DeleteById))).Methods("DELETE")
 	r.logger.Info("Route registered: DELETE /input/{id} (PROTECTED)")
+
+	// Rotas do Order (protegidas)
+	router.Handle("/order", r.authMiddleware.Authenticate(http.HandlerFunc(r.orderController.Create))).Methods("POST")
+	r.logger.Info("Route registered: POST /order (PROTECTED)")
+
+	router.Handle("/order/{orderId}/input", r.authMiddleware.Authenticate(http.HandlerFunc(r.orderController.AddInputToOrder))).Methods("POST")
+	r.logger.Info("Route registered: POST /order/{orderId}/input (PROTECTED)")
+
+	router.Handle("/order/{orderId}/input/remove", r.authMiddleware.Authenticate(http.HandlerFunc(r.orderController.RemoveInputFromOrder))).Methods("POST")
+	r.logger.Info("Route registered: POST /order/{orderId}/input/remove (PROTECTED)")
+
+	router.Handle("/order/{orderId}/completed", r.authMiddleware.Authenticate(http.HandlerFunc(r.orderController.FindCompletedOrderById))).Methods("GET")
+	r.logger.Info("Route registered: GET /order/{orderId}/completed (PROTECTED)")
+
+	router.Handle("/order/{orderId}/status", r.authMiddleware.Authenticate(http.HandlerFunc(r.orderController.UpdateOrderStatus))).Methods("PUT")
+	r.logger.Info("Route registered: PUT /order/{orderId}/status (PROTECTED)")
 
 	r.logger.Info("All routes registered successfully")
 }
