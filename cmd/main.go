@@ -12,6 +12,7 @@ import (
 	authUseCase "github.com/ln0rd/tech_challenge_12soat/internal/usecase/auth"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/customer"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/user"
+	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/vehicle"
 
 	"net/http"
 
@@ -64,9 +65,9 @@ func main() {
 	logger.Info("Initializing the application...")
 	r := mux.NewRouter()
 
-	customerController, healthController, userController, authController, authMiddleware := InitInstances()
+	customerController, healthController, userController, authController, vehicleController, authMiddleware := InitInstances()
 
-	rt := routes.NewRouter(logger, customerController, userController, authController, healthController, authMiddleware)
+	rt := routes.NewRouter(logger, customerController, userController, authController, healthController, vehicleController, authMiddleware)
 	rt.SetupRouter(r)
 
 	logger.Info("Server starting", zap.String("port", httpPort))
@@ -82,7 +83,7 @@ func getCurrentDir() string {
 	return dir
 }
 
-func InitInstances() (*controller.CustomerController, *controller.HealthController, *controller.UserController, *controller.AuthController, *middleware.AuthMiddleware) {
+func InitInstances() (*controller.CustomerController, *controller.HealthController, *controller.UserController, *controller.AuthController, *controller.VehicleController, *middleware.AuthMiddleware) {
 	createCustomerUC := &customer.CreateCustomer{DB: db.DB, Logger: logger}
 	findAllCustomerUC := &customer.FindAllCustomer{DB: db.DB, Logger: logger}
 	findByIdCustomerUC := &customer.FindByIdCustomer{DB: db.DB, Logger: logger}
@@ -104,6 +105,20 @@ func InitInstances() (*controller.CustomerController, *controller.HealthControll
 		CreateUser: createUserUC,
 	}
 
+	createVehicleUC := &vehicle.CreateVehicle{DB: db.DB, Logger: logger}
+	findByIdVehicleUC := &vehicle.FindByIdVehicle{DB: db.DB, Logger: logger}
+	findByCustomerIdVehicleUC := &vehicle.FindByCustomerIdVehicle{DB: db.DB, Logger: logger}
+	updateByIdVehicleUC := &vehicle.UpdateByIdVehicle{DB: db.DB, Logger: logger}
+	deleteByIdVehicleUC := &vehicle.DeleteByIdVehicle{DB: db.DB, Logger: logger}
+	vehicleController := &controller.VehicleController{
+		Logger:                  logger,
+		CreateVehicle:           createVehicleUC,
+		FindByIdVehicle:         findByIdVehicleUC,
+		FindByCustomerIdVehicle: findByCustomerIdVehicleUC,
+		UpdateByIdVehicle:       updateByIdVehicleUC,
+		DeleteByIdVehicle:       deleteByIdVehicleUC,
+	}
+
 	// Auth components
 	authRepository := authInfra.NewAuthRepository(db.DB, logger)
 	jwtService := authInfra.NewJWTService(logger)
@@ -119,5 +134,5 @@ func InitInstances() (*controller.CustomerController, *controller.HealthControll
 
 	healthController := &controller.HealthController{}
 
-	return customerController, healthController, userController, authController, authMiddleware
+	return customerController, healthController, userController, authController, vehicleController, authMiddleware
 }

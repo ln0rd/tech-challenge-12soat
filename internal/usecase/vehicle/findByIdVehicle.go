@@ -1,0 +1,47 @@
+package vehicle
+
+import (
+	"github.com/google/uuid"
+	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/vehicle"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"go.uber.org/zap"
+	"gorm.io/gorm"
+)
+
+type FindByIdVehicle struct {
+	DB     *gorm.DB
+	Logger *zap.Logger
+}
+
+func (uc *FindByIdVehicle) Process(id uuid.UUID) (*domain.Vehicle, error) {
+	uc.Logger.Info("Processing find vehicle by ID", zap.String("id", id.String()))
+
+	var vehicle models.Vehicle
+	if err := uc.DB.Where("id = ?", id).First(&vehicle).Error; err != nil {
+		uc.Logger.Error("Database error finding vehicle by ID", zap.Error(err), zap.String("id", id.String()))
+		return nil, err
+	}
+
+	uc.Logger.Info("Found vehicle in database",
+		zap.String("id", vehicle.ID.String()),
+		zap.String("model", vehicle.Model),
+		zap.String("brand", vehicle.Brand),
+		zap.String("numberPlate", vehicle.NumberPlate))
+
+	domainVehicle := domain.Vehicle{
+		ID:                          vehicle.ID,
+		Model:                       vehicle.Model,
+		Brand:                       vehicle.Brand,
+		ReleaseYear:                 vehicle.ReleaseYear,
+		VehicleIdentificationNumber: vehicle.VehicleIdentificationNumber,
+		NumberPlate:                 vehicle.NumberPlate,
+		Color:                       vehicle.Color,
+		CustomerID:                  vehicle.CustomerID,
+		CreatedAt:                   vehicle.CreatedAt,
+		UpdatedAt:                   vehicle.UpdatedAt,
+	}
+
+	uc.Logger.Info("Successfully mapped vehicle to domain", zap.String("id", domainVehicle.ID.String()))
+
+	return &domainVehicle, nil
+}

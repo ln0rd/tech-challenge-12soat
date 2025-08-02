@@ -17,10 +17,11 @@ type Router struct {
 	userController     *controller.UserController
 	authController     *controller.AuthController
 	healthController   *controller.HealthController
+	vehicleController  *controller.VehicleController
 	authMiddleware     *middleware.AuthMiddleware
 }
 
-func NewRouter(logger *zap.Logger, customerController *controller.CustomerController, userController *controller.UserController, authController *controller.AuthController, healthController *controller.HealthController, authMiddleware *middleware.AuthMiddleware) *Router {
+func NewRouter(logger *zap.Logger, customerController *controller.CustomerController, userController *controller.UserController, authController *controller.AuthController, healthController *controller.HealthController, vehicleController *controller.VehicleController, authMiddleware *middleware.AuthMiddleware) *Router {
 	return &Router{
 		router:             mux.NewRouter(),
 		logger:             logger,
@@ -28,6 +29,7 @@ func NewRouter(logger *zap.Logger, customerController *controller.CustomerContro
 		userController:     userController,
 		authController:     authController,
 		healthController:   healthController,
+		vehicleController:  vehicleController,
 		authMiddleware:     authMiddleware,
 	}
 }
@@ -62,6 +64,22 @@ func (r *Router) SetupRouter(router *mux.Router) {
 
 	router.Handle("/customer/{id}", r.authMiddleware.Authenticate(http.HandlerFunc(r.customerController.DeleteById))).Methods("DELETE")
 	r.logger.Info("Route registered: DELETE /customer/{id} (PROTECTED)")
+
+	// Rotas do Vehicle (protegidas)
+	router.Handle("/vehicle", r.authMiddleware.Authenticate(http.HandlerFunc(r.vehicleController.Create))).Methods("POST")
+	r.logger.Info("Route registered: POST /vehicle (PROTECTED)")
+
+	router.Handle("/vehicle/{id}", r.authMiddleware.Authenticate(http.HandlerFunc(r.vehicleController.FindById))).Methods("GET")
+	r.logger.Info("Route registered: GET /vehicle/{id} (PROTECTED)")
+
+	router.Handle("/vehicle/{id}", r.authMiddleware.Authenticate(http.HandlerFunc(r.vehicleController.UpdateById))).Methods("PUT")
+	r.logger.Info("Route registered: PUT /vehicle/{id} (PROTECTED)")
+
+	router.Handle("/vehicle/{id}", r.authMiddleware.Authenticate(http.HandlerFunc(r.vehicleController.DeleteById))).Methods("DELETE")
+	r.logger.Info("Route registered: DELETE /vehicle/{id} (PROTECTED)")
+
+	router.Handle("/vehicle/customer/{customerId}", r.authMiddleware.Authenticate(http.HandlerFunc(r.vehicleController.FindByCustomerId))).Methods("GET")
+	r.logger.Info("Route registered: GET /vehicle/customer/{customerId} (PROTECTED)")
 
 	r.logger.Info("All routes registered successfully")
 }
