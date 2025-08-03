@@ -6,7 +6,6 @@ CREATE TABLE order_status_history (
     status VARCHAR NOT NULL,
     started_at TIMESTAMP NOT NULL,
     ended_at TIMESTAMP NULL,
-    duration_minutes INTEGER NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (order_id) REFERENCES orders(id)
 ); 

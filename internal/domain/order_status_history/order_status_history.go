@@ -7,11 +7,10 @@ import (
 )
 
 type OrderStatusHistory struct {
-	ID              uuid.UUID  `json:"id"`
-	OrderID         uuid.UUID  `json:"order_id"`
-	Status          string     `json:"status"`
-	StartedAt       time.Time  `json:"started_at"`
-	EndedAt         *time.Time `json:"ended_at,omitempty"`
-	DurationMinutes *int       `json:"duration_minutes,omitempty"`
-	CreatedAt       time.Time  `json:"created_at"`
+	ID        uuid.UUID  `json:"id"`
+	OrderID   uuid.UUID  `json:"order_id"`
+	Status    string     `json:"status"`
+	StartedAt time.Time  `json:"started_at"`
+	EndedAt   *time.Time `json:"ended_at,omitempty"`
+	CreatedAt time.Time  `json:"created_at"`
 }

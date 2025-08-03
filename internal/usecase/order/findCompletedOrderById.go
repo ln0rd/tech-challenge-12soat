@@ -2,6 +2,7 @@ package order
 
 import (
 	"errors"
+	"fmt"
 
 	"github.com/google/uuid"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/order"
@@ -16,10 +17,12 @@ type FindCompletedOrderById struct {
 }
 
 type OrderWithInputs struct {
-	Order      *domain.Order       `json:"order"`
-	Vehicle    VehicleDetails      `json:"vehicle"`
-	Inputs     []OrderInputDetails `json:"inputs"`
-	TotalPrice float64             `json:"total_price"`
+	Order       *domain.Order       `json:"order"`
+	Vehicle     VehicleDetails      `json:"vehicle"`
+	Inputs      []OrderInputDetails `json:"inputs"`
+	TotalPrice  float64             `json:"total_price"`
+	Timeline    map[string]string   `json:"timeline"`
+	AverageTime string              `json:"average_time"`
 }
 
 type VehicleDetails struct {
@@ -39,6 +42,92 @@ type OrderInputDetails struct {
 	Quantity   int     `json:"quantity"`
 	UnitPrice  float64 `json:"unit_price"`
 	TotalPrice float64 `json:"total_price"`
+}
+
+// Formata duração em minutos para HH:MM:SS
+func formatDuration(minutes int) string {
+	if minutes <= 0 {
+		return "00:00:00"
+	}
+
+	hours := minutes / 60
+	remainingMinutes := minutes % 60
+	seconds := 0 // Como não temos segundos, sempre será 0
+
+	return fmt.Sprintf("%02d:%02d:%02d", hours, remainingMinutes, seconds)
+}
+
+// Converte segundos para formato HH:MM:SS
+func formatDurationFromSeconds(seconds int) string {
+	if seconds <= 0 {
+		return "00:00:00"
+	}
+
+	hours := seconds / 3600
+	remainingSeconds := seconds % 3600
+	minutes := remainingSeconds / 60
+	secs := remainingSeconds % 60
+
+	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, secs)
+}
+
+// Calcula timeline e tempo médio baseado no histórico de status
+func (uc *FindCompletedOrderById) calculateTimeline(orderID uuid.UUID) (map[string]string, string) {
+	var history []models.OrderStatusHistory
+
+	if err := uc.DB.Where("order_id = ? ORDER BY started_at ASC", orderID).Find(&history).Error; err != nil {
+		uc.Logger.Error("Error fetching order status history", zap.Error(err))
+		return make(map[string]string), "00:00:00"
+	}
+
+	uc.Logger.Info("Found order status history",
+		zap.String("orderID", orderID.String()),
+		zap.Int("historyCount", len(history)))
+
+	timeline := make(map[string]string)
+	var totalSeconds int
+	var completedStatuses int
+
+	for _, status := range history {
+		if status.EndedAt != nil {
+			// Status finalizado - calcula duração baseada em started_at e ended_at
+			duration := status.EndedAt.Sub(status.StartedAt)
+			durationSeconds := int(duration.Seconds())
+
+			timeline[status.Status] = formatDurationFromSeconds(durationSeconds)
+			totalSeconds += durationSeconds
+			completedStatuses++
+
+			uc.Logger.Info("Status duration calculated",
+				zap.String("status", status.Status),
+				zap.Time("startedAt", status.StartedAt),
+				zap.Time("endedAt", *status.EndedAt),
+				zap.Int("durationSeconds", durationSeconds))
+		} else {
+			// Status atual (não finalizado)
+			timeline[status.Status] = "00:00:00"
+			uc.Logger.Info("Status not completed yet",
+				zap.String("status", status.Status),
+				zap.Time("startedAt", status.StartedAt))
+		}
+	}
+
+	// Calcula tempo médio
+	var averageTime string
+	if completedStatuses > 0 {
+		averageSeconds := totalSeconds / completedStatuses
+		averageTime = formatDurationFromSeconds(averageSeconds)
+	} else {
+		averageTime = "00:00:00"
+	}
+
+	uc.Logger.Info("Timeline calculated",
+		zap.String("orderID", orderID.String()),
+		zap.Int("totalSeconds", totalSeconds),
+		zap.Int("completedStatuses", completedStatuses),
+		zap.String("averageTime", averageTime))
+
+	return timeline, averageTime
 }
 
 func (uc *FindCompletedOrderById) Process(orderID uuid.UUID) (*OrderWithInputs, error) {
@@ -138,16 +227,23 @@ func (uc *FindCompletedOrderById) Process(orderID uuid.UUID) (*OrderWithInputs, 
 		Color:                       vehicle.Color,
 	}
 
+	// Calcula timeline e tempo médio
+	timeline, averageTime := uc.calculateTimeline(orderID)
+
 	result := &OrderWithInputs{
-		Order:      domainOrder,
-		Vehicle:    vehicleDetails,
-		Inputs:     inputs,
-		TotalPrice: totalPrice,
+		Order:       domainOrder,
+		Vehicle:     vehicleDetails,
+		Inputs:      inputs,
+		TotalPrice:  totalPrice,
+		Timeline:    timeline,
+		AverageTime: averageTime,
 	}
 
-	uc.Logger.Info("Completed order with inputs retrieved successfully",
+	uc.Logger.Info("Completed order with inputs and timeline retrieved successfully",
 		zap.String("orderID", orderID.String()),
-		zap.Int("inputsCount", len(inputs)))
+		zap.Int("inputsCount", len(inputs)),
+		zap.Int("timelineEntries", len(timeline)),
+		zap.String("averageTime", averageTime))
 
 	return result, nil
 }
