@@ -5,13 +5,15 @@ import (
 
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/order"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/order_status_history"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type CreateOrder struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	DB                   *gorm.DB
+	Logger               *zap.Logger
+	StatusHistoryManager *order_status_history.ManageOrderStatusHistory
 }
 
 func (uc *CreateOrder) Process(entity *domain.Order) error {
@@ -67,6 +69,18 @@ func (uc *CreateOrder) Process(entity *domain.Order) error {
 	uc.Logger.Info("Order created in database",
 		zap.String("id", model.ID.String()),
 		zap.Int64("rowsAffected", result.RowsAffected))
+
+	// Inicia o histórico de status com o status inicial
+	err := uc.StatusHistoryManager.StartNewStatus(model.ID, model.Status)
+	if err != nil {
+		uc.Logger.Error("Error starting status history", zap.Error(err))
+		// Não retorna erro aqui, pois a order já foi criada
+		// Apenas loga o erro para monitoramento
+	} else {
+		uc.Logger.Info("Status history started successfully",
+			zap.String("orderID", model.ID.String()),
+			zap.String("status", model.Status))
+	}
 
 	return nil
 }

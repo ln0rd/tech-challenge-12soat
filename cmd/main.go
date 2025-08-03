@@ -14,6 +14,7 @@ import (
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/input"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/order"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/order_input"
+	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/order_status_history"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/user"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/vehicle"
 
@@ -136,9 +137,21 @@ func InitInstances() (*controller.CustomerController, *controller.HealthControll
 		DeleteByIdInput: deleteByIdInputUC,
 	}
 
-	createOrderUC := &order.CreateOrder{DB: db.DB, Logger: logger}
+	// Order Status History usecase
+	manageOrderStatusHistoryUC := &order_status_history.ManageOrderStatusHistory{DB: db.DB, Logger: logger}
+
+	createOrderUC := &order.CreateOrder{
+		DB:                   db.DB,
+		Logger:               logger,
+		StatusHistoryManager: manageOrderStatusHistoryUC,
+	}
 	findCompletedOrderByIdUC := &order.FindCompletedOrderById{DB: db.DB, Logger: logger}
-	updateOrderStatusUC := &order.UpdateOrderStatus{DB: db.DB, Logger: logger}
+
+	updateOrderStatusUC := &order.UpdateOrderStatus{
+		DB:                   db.DB,
+		Logger:               logger,
+		StatusHistoryManager: manageOrderStatusHistoryUC,
+	}
 
 	// Order Input usecases
 	decreaseQuantityInputUC := &input.DecreaseQuantityInput{DB: db.DB, Logger: logger}

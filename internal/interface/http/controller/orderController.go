@@ -15,7 +15,7 @@ import (
 )
 
 var (
-	orderStatusRegex = regexp.MustCompile(`^(Received|Undergoing diagnosis|Awaiting approval|In progress|Completed|Delivered)$`)
+	orderStatusRegex = regexp.MustCompile(`^(Received|Undergoing diagnosis|Awaiting approval|In progress|Completed|Delivered|Canceled)$`)
 )
 
 const (
@@ -25,6 +25,7 @@ const (
 	OrderStatusInProgress          = "In progress"
 	OrderStatusCompleted           = "Completed"
 	OrderStatusDelivered           = "Delivered"
+	OrderStatusCanceled            = "Canceled"
 )
 
 type OrderController struct {

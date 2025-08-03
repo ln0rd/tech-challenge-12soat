@@ -7,12 +7,19 @@ import (
 )
 
 const (
-	StatusReceived            = "Received"
+	StatusReceived = "Received"
+	// ------------------------------ Mecanico abre OS
 	StatusUndergoingDiagnosis = "Undergoing diagnosis"
-	StatusAwaitingApproval    = "Awaiting approval"
-	StatusInProgress          = "In progress"
-	StatusCompleted           = "Completed"
-	StatusDelivered           = "Delivered"
+	// ------------------------------ Cliente aprova OS
+	StatusAwaitingApproval = "Awaiting approval"
+	// ------------------------------ Mecanico inicia serviço
+	StatusInProgress = "In progress"
+	// ------------------------------ Mecanico finaliza serviço
+	StatusCompleted = "Completed"
+	// ------------------------------ Cliente retira veículo
+	StatusDelivered = "Delivered"
+	// ------------------------------ Order cancelada
+	StatusCanceled = "Canceled"
 )
 
 type Order struct {

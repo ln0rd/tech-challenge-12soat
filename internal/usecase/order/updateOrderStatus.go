@@ -5,13 +5,15 @@ import (
 
 	"github.com/google/uuid"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/order_status_history"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type UpdateOrderStatus struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	DB                   *gorm.DB
+	Logger               *zap.Logger
+	StatusHistoryManager *order_status_history.ManageOrderStatusHistory
 }
 
 func (uc *UpdateOrderStatus) Process(orderID uuid.UUID, newStatus string) error {
@@ -27,6 +29,7 @@ func (uc *UpdateOrderStatus) Process(orderID uuid.UUID, newStatus string) error 
 		"In progress",
 		"Completed",
 		"Delivered",
+		"Canceled",
 	}
 
 	isValidStatus := false
@@ -70,6 +73,14 @@ func (uc *UpdateOrderStatus) Process(orderID uuid.UUID, newStatus string) error 
 		zap.String("oldStatus", order.Status),
 		zap.String("newStatus", newStatus),
 		zap.Int64("rowsAffected", result.RowsAffected))
+
+	// Atualiza o histórico de status
+	historyErr := uc.StatusHistoryManager.UpdateStatus(orderID, newStatus)
+	if historyErr != nil {
+		uc.Logger.Error("Error updating status history", zap.Error(historyErr))
+		// Não retorna erro aqui, pois a order já foi atualizada
+		// Apenas loga o erro para monitoramento
+	}
 
 	return nil
 }
