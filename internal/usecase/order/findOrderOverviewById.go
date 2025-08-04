@@ -44,21 +44,8 @@ type OrderInputDetails struct {
 	TotalPrice float64 `json:"total_price"`
 }
 
-// Formata duração em minutos para HH:MM:SS
-func formatDuration(minutes int) string {
-	if minutes <= 0 {
-		return "00:00:00"
-	}
-
-	hours := minutes / 60
-	remainingMinutes := minutes % 60
-	seconds := 0 // Como não temos segundos, sempre será 0
-
-	return fmt.Sprintf("%02d:%02d:%02d", hours, remainingMinutes, seconds)
-}
-
-// Converte segundos para formato HH:MM:SS
-func formatDurationFromSeconds(seconds int) string {
+// FormatDurationFromSeconds converte segundos para formato HH:MM:SS
+func FormatDurationFromSeconds(seconds int) string {
 	if seconds <= 0 {
 		return "00:00:00"
 	}
@@ -71,8 +58,123 @@ func formatDurationFromSeconds(seconds int) string {
 	return fmt.Sprintf("%02d:%02d:%02d", hours, minutes, secs)
 }
 
-// Calcula timeline e tempo médio baseado no histórico de status
-func (uc *FindOrderOverviewById) calculateTimeline(orderID uuid.UUID) (map[string]string, string) {
+// FetchOrderFromDB busca um order específico do banco de dados
+func (uc *FindOrderOverviewById) FetchOrderFromDB(orderID uuid.UUID) (*models.Order, error) {
+	var order models.Order
+	if err := uc.DB.Where("id = ?", orderID).First(&order).Error; err != nil {
+		uc.Logger.Error("Order not found", zap.String("orderID", orderID.String()))
+		return nil, errors.New("order not found")
+	}
+
+	uc.Logger.Info("Order found",
+		zap.String("orderID", order.ID.String()),
+		zap.String("customerID", order.CustomerID.String()),
+		zap.String("vehicleID", order.VehicleID.String()),
+		zap.String("status", order.Status))
+
+	return &order, nil
+}
+
+// FetchVehicleFromDB busca um vehicle específico do banco de dados
+func (uc *FindOrderOverviewById) FetchVehicleFromDB(vehicleID uuid.UUID) (*models.Vehicle, error) {
+	var vehicle models.Vehicle
+	if err := uc.DB.Where("id = ?", vehicleID).First(&vehicle).Error; err != nil {
+		uc.Logger.Error("Vehicle not found",
+			zap.String("vehicleID", vehicleID.String()))
+		return nil, errors.New("vehicle not found")
+	}
+
+	uc.Logger.Info("Vehicle found",
+		zap.String("vehicleID", vehicle.ID.String()),
+		zap.String("model", vehicle.Model),
+		zap.String("brand", vehicle.Brand),
+		zap.String("numberPlate", vehicle.NumberPlate))
+
+	return &vehicle, nil
+}
+
+// FetchOrderInputsFromDB busca os inputs da order do banco de dados
+func (uc *FindOrderOverviewById) FetchOrderInputsFromDB(orderID uuid.UUID) ([]models.OrderInput, error) {
+	var orderInputs []models.OrderInput
+	if err := uc.DB.Where("order_id = ?", orderID).Find(&orderInputs).Error; err != nil {
+		uc.Logger.Error("Database error finding order inputs", zap.Error(err))
+		return nil, err
+	}
+
+	uc.Logger.Info("Found order inputs", zap.Int("count", len(orderInputs)))
+	return orderInputs, nil
+}
+
+// MapVehicleToDetails mapeia o vehicle para VehicleDetails
+func (uc *FindOrderOverviewById) MapVehicleToDetails(vehicle *models.Vehicle) VehicleDetails {
+	return VehicleDetails{
+		ID:                          vehicle.ID.String(),
+		Model:                       vehicle.Model,
+		Brand:                       vehicle.Brand,
+		ReleaseYear:                 vehicle.ReleaseYear,
+		VehicleIdentificationNumber: vehicle.VehicleIdentificationNumber,
+		NumberPlate:                 vehicle.NumberPlate,
+		Color:                       vehicle.Color,
+	}
+}
+
+// MapOrderInputToDetails mapeia um OrderInput para OrderInputDetails
+func (uc *FindOrderOverviewById) MapOrderInputToDetails(orderInput models.OrderInput, inputName string) OrderInputDetails {
+	return OrderInputDetails{
+		ID:         orderInput.ID.String(),
+		InputID:    orderInput.InputID.String(),
+		InputName:  inputName,
+		Quantity:   orderInput.Quantity,
+		UnitPrice:  orderInput.UnitPrice,
+		TotalPrice: orderInput.TotalPrice,
+	}
+}
+
+// ProcessOrderInputs processa os inputs da order e calcula o total
+func (uc *FindOrderOverviewById) ProcessOrderInputs(orderInputs []models.OrderInput) ([]OrderInputDetails, float64) {
+	var inputs []OrderInputDetails
+	var totalPrice float64 = 0
+
+	for _, orderInput := range orderInputs {
+		// Busca o nome do input
+		var input models.Input
+		if err := uc.DB.Where("id = ?", orderInput.InputID).First(&input).Error; err != nil {
+			uc.Logger.Error("Input not found for order input",
+				zap.String("inputID", orderInput.InputID.String()),
+				zap.String("orderInputID", orderInput.ID.String()))
+			continue // Pula este input se não encontrar
+		}
+
+		inputDetail := uc.MapOrderInputToDetails(orderInput, input.Name)
+		inputs = append(inputs, inputDetail)
+		totalPrice += orderInput.TotalPrice
+
+		uc.Logger.Info("Added input detail",
+			zap.String("inputID", orderInput.InputID.String()),
+			zap.String("inputName", input.Name),
+			zap.Int("quantity", orderInput.Quantity),
+			zap.Float64("unitPrice", orderInput.UnitPrice),
+			zap.Float64("totalPrice", orderInput.TotalPrice))
+	}
+
+	uc.Logger.Info("Calculated total price", zap.Float64("totalPrice", totalPrice))
+	return inputs, totalPrice
+}
+
+// MapOrderToDomain mapeia a order para o domínio
+func (uc *FindOrderOverviewById) MapOrderToDomain(order *models.Order) *domain.Order {
+	return &domain.Order{
+		ID:         order.ID,
+		CustomerID: order.CustomerID,
+		VehicleID:  order.VehicleID,
+		Status:     order.Status,
+		CreatedAt:  order.CreatedAt,
+		UpdatedAt:  order.UpdatedAt,
+	}
+}
+
+// CalculateTimeline calcula timeline e tempo médio baseado no histórico de status
+func (uc *FindOrderOverviewById) CalculateTimeline(orderID uuid.UUID) (map[string]string, string) {
 	var history []models.OrderStatusHistory
 
 	if err := uc.DB.Where("order_id = ? ORDER BY started_at ASC", orderID).Find(&history).Error; err != nil {
@@ -94,7 +196,7 @@ func (uc *FindOrderOverviewById) calculateTimeline(orderID uuid.UUID) (map[strin
 			duration := status.EndedAt.Sub(status.StartedAt)
 			durationSeconds := int(duration.Seconds())
 
-			timeline[status.Status] = formatDurationFromSeconds(durationSeconds)
+			timeline[status.Status] = FormatDurationFromSeconds(durationSeconds)
 			totalSeconds += durationSeconds
 			completedStatuses++
 
@@ -116,7 +218,7 @@ func (uc *FindOrderOverviewById) calculateTimeline(orderID uuid.UUID) (map[strin
 	var averageTime string
 	if completedStatuses > 0 {
 		averageSeconds := totalSeconds / completedStatuses
-		averageTime = formatDurationFromSeconds(averageSeconds)
+		averageTime = FormatDurationFromSeconds(averageSeconds)
 	} else {
 		averageTime = "00:00:00"
 	}
@@ -134,101 +236,34 @@ func (uc *FindOrderOverviewById) Process(orderID uuid.UUID) (*OrderWithInputs, e
 	uc.Logger.Info("Processing find completed order by ID", zap.String("orderID", orderID.String()))
 
 	// Busca a order
-	var order models.Order
-	if err := uc.DB.Where("id = ?", orderID).First(&order).Error; err != nil {
-		uc.Logger.Error("Order not found", zap.String("orderID", orderID.String()))
-		return nil, errors.New("order not found")
-	}
-
-	uc.Logger.Info("Order found",
-		zap.String("orderID", order.ID.String()),
-		zap.String("customerID", order.CustomerID.String()),
-		zap.String("vehicleID", order.VehicleID.String()),
-		zap.String("status", order.Status))
-
-	// Busca as informações do vehicle
-	var vehicle models.Vehicle
-	if err := uc.DB.Where("id = ?", order.VehicleID).First(&vehicle).Error; err != nil {
-		uc.Logger.Error("Vehicle not found",
-			zap.String("vehicleID", order.VehicleID.String()),
-			zap.String("orderID", orderID.String()))
-		return nil, errors.New("vehicle not found")
-	}
-
-	uc.Logger.Info("Vehicle found",
-		zap.String("vehicleID", vehicle.ID.String()),
-		zap.String("model", vehicle.Model),
-		zap.String("brand", vehicle.Brand),
-		zap.String("numberPlate", vehicle.NumberPlate))
-
-	// Busca os inputs relacionados à order
-	var orderInputs []models.OrderInput
-	if err := uc.DB.Where("order_id = ?", orderID).Find(&orderInputs).Error; err != nil {
-		uc.Logger.Error("Database error finding order inputs", zap.Error(err))
+	order, err := uc.FetchOrderFromDB(orderID)
+	if err != nil {
 		return nil, err
 	}
 
-	uc.Logger.Info("Found order inputs", zap.Int("count", len(orderInputs)))
-
-	// Busca os detalhes dos inputs e calcula o total
-	var inputs []OrderInputDetails
-	var totalPrice float64 = 0
-
-	for _, orderInput := range orderInputs {
-		// Busca o nome do input
-		var input models.Input
-		if err := uc.DB.Where("id = ?", orderInput.InputID).First(&input).Error; err != nil {
-			uc.Logger.Error("Input not found for order input",
-				zap.String("inputID", orderInput.InputID.String()),
-				zap.String("orderInputID", orderInput.ID.String()))
-			continue // Pula este input se não encontrar
-		}
-
-		inputDetail := OrderInputDetails{
-			ID:         orderInput.ID.String(),
-			InputID:    orderInput.InputID.String(),
-			InputName:  input.Name,
-			Quantity:   orderInput.Quantity,
-			UnitPrice:  orderInput.UnitPrice,
-			TotalPrice: orderInput.TotalPrice,
-		}
-
-		inputs = append(inputs, inputDetail)
-		totalPrice += orderInput.TotalPrice
-
-		uc.Logger.Info("Added input detail",
-			zap.String("inputID", orderInput.InputID.String()),
-			zap.String("inputName", input.Name),
-			zap.Int("quantity", orderInput.Quantity),
-			zap.Float64("unitPrice", orderInput.UnitPrice),
-			zap.Float64("totalPrice", orderInput.TotalPrice))
+	// Busca as informações do vehicle
+	vehicle, err := uc.FetchVehicleFromDB(order.VehicleID)
+	if err != nil {
+		return nil, err
 	}
 
-	uc.Logger.Info("Calculated total price", zap.Float64("totalPrice", totalPrice))
+	// Busca os inputs relacionados à order
+	orderInputs, err := uc.FetchOrderInputsFromDB(orderID)
+	if err != nil {
+		return nil, err
+	}
+
+	// Processa os inputs e calcula o total
+	inputs, totalPrice := uc.ProcessOrderInputs(orderInputs)
 
 	// Mapeia para o domínio
-	domainOrder := &domain.Order{
-		ID:         order.ID,
-		CustomerID: order.CustomerID,
-		VehicleID:  order.VehicleID,
-		Status:     order.Status,
-		CreatedAt:  order.CreatedAt,
-		UpdatedAt:  order.UpdatedAt,
-	}
+	domainOrder := uc.MapOrderToDomain(order)
 
 	// Mapeia os detalhes do vehicle
-	vehicleDetails := VehicleDetails{
-		ID:                          vehicle.ID.String(),
-		Model:                       vehicle.Model,
-		Brand:                       vehicle.Brand,
-		ReleaseYear:                 vehicle.ReleaseYear,
-		VehicleIdentificationNumber: vehicle.VehicleIdentificationNumber,
-		NumberPlate:                 vehicle.NumberPlate,
-		Color:                       vehicle.Color,
-	}
+	vehicleDetails := uc.MapVehicleToDetails(vehicle)
 
 	// Calcula timeline e tempo médio
-	timeline, averageTime := uc.calculateTimeline(orderID)
+	timeline, averageTime := uc.CalculateTimeline(orderID)
 
 	result := &OrderWithInputs{
 		Order:       domainOrder,
