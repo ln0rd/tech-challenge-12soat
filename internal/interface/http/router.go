@@ -21,9 +21,10 @@ type Router struct {
 	inputController    *controller.InputController
 	orderController    *controller.OrderController
 	authMiddleware     *middleware.AuthMiddleware
+	authzMiddleware    *middleware.AuthorizationMiddleware
 }
 
-func NewRouter(logger *zap.Logger, customerController *controller.CustomerController, userController *controller.UserController, authController *controller.AuthController, healthController *controller.HealthController, vehicleController *controller.VehicleController, inputController *controller.InputController, orderController *controller.OrderController, authMiddleware *middleware.AuthMiddleware) *Router {
+func NewRouter(logger *zap.Logger, customerController *controller.CustomerController, userController *controller.UserController, authController *controller.AuthController, healthController *controller.HealthController, vehicleController *controller.VehicleController, inputController *controller.InputController, orderController *controller.OrderController, authMiddleware *middleware.AuthMiddleware, authzMiddleware *middleware.AuthorizationMiddleware) *Router {
 	return &Router{
 		router:             mux.NewRouter(),
 		logger:             logger,
@@ -35,6 +36,7 @@ func NewRouter(logger *zap.Logger, customerController *controller.CustomerContro
 		inputController:    inputController,
 		orderController:    orderController,
 		authMiddleware:     authMiddleware,
+		authzMiddleware:    authzMiddleware,
 	}
 }
 
@@ -53,69 +55,71 @@ func (r *Router) SetupRouter(router *mux.Router) {
 	router.HandleFunc("/user", r.userController.Create).Methods("POST")
 	r.logger.Info("Route registered: POST /user")
 
-	// Rotas protegidas (com autenticação)
-	router.Handle("/customer", r.authMiddleware.Authenticate(http.HandlerFunc(r.customerController.Create))).Methods("POST")
-	r.logger.Info("Route registered: POST /customer (PROTECTED)")
+	// ===== ROTAS PARA MECHANIC E ADMIN =====
+	// Customer routes - mechanic e admin
+	router.Handle("/customer", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.customerController.Create)))).Methods("POST")
+	r.logger.Info("Route registered: POST /customer (MECHANIC & ADMIN)")
 
-	router.Handle("/customer", r.authMiddleware.Authenticate(http.HandlerFunc(r.customerController.FindAll))).Methods("GET")
-	r.logger.Info("Route registered: GET /customer (PROTECTED)")
+	router.Handle("/customer", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.customerController.FindAll)))).Methods("GET")
+	r.logger.Info("Route registered: GET /customer (MECHANIC & ADMIN)")
 
-	router.Handle("/customer/{id}", r.authMiddleware.Authenticate(http.HandlerFunc(r.customerController.FindById))).Methods("GET")
-	r.logger.Info("Route registered: GET /customer/{id} (PROTECTED)")
+	router.Handle("/customer/{id}", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.customerController.FindById)))).Methods("GET")
+	r.logger.Info("Route registered: GET /customer/{id} (MECHANIC & ADMIN)")
 
-	router.Handle("/customer/{id}", r.authMiddleware.Authenticate(http.HandlerFunc(r.customerController.UpdateById))).Methods("PUT")
-	r.logger.Info("Route registered: PUT /customer/{id} (PROTECTED)")
+	router.Handle("/customer/{id}", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.customerController.UpdateById)))).Methods("PUT")
+	r.logger.Info("Route registered: PUT /customer/{id} (MECHANIC & ADMIN)")
 
-	router.Handle("/customer/{id}", r.authMiddleware.Authenticate(http.HandlerFunc(r.customerController.DeleteById))).Methods("DELETE")
-	r.logger.Info("Route registered: DELETE /customer/{id} (PROTECTED)")
+	router.Handle("/customer/{id}", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.customerController.DeleteById)))).Methods("DELETE")
+	r.logger.Info("Route registered: DELETE /customer/{id} (MECHANIC & ADMIN)")
 
-	// Rotas do Vehicle (protegidas)
-	router.Handle("/vehicle", r.authMiddleware.Authenticate(http.HandlerFunc(r.vehicleController.Create))).Methods("POST")
-	r.logger.Info("Route registered: POST /vehicle (PROTECTED)")
+	// Vehicle routes - mechanic e admin
+	router.Handle("/vehicle", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.vehicleController.Create)))).Methods("POST")
+	r.logger.Info("Route registered: POST /vehicle (MECHANIC & ADMIN)")
 
-	router.Handle("/vehicle/{id}", r.authMiddleware.Authenticate(http.HandlerFunc(r.vehicleController.FindById))).Methods("GET")
-	r.logger.Info("Route registered: GET /vehicle/{id} (PROTECTED)")
+	router.Handle("/vehicle/{id}", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.vehicleController.FindById)))).Methods("GET")
+	r.logger.Info("Route registered: GET /vehicle/{id} (MECHANIC & ADMIN)")
 
-	router.Handle("/vehicle/{id}", r.authMiddleware.Authenticate(http.HandlerFunc(r.vehicleController.UpdateById))).Methods("PUT")
-	r.logger.Info("Route registered: PUT /vehicle/{id} (PROTECTED)")
+	router.Handle("/vehicle/{id}", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.vehicleController.UpdateById)))).Methods("PUT")
+	r.logger.Info("Route registered: PUT /vehicle/{id} (MECHANIC & ADMIN)")
 
-	router.Handle("/vehicle/{id}", r.authMiddleware.Authenticate(http.HandlerFunc(r.vehicleController.DeleteById))).Methods("DELETE")
-	r.logger.Info("Route registered: DELETE /vehicle/{id} (PROTECTED)")
+	router.Handle("/vehicle/{id}", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.vehicleController.DeleteById)))).Methods("DELETE")
+	r.logger.Info("Route registered: DELETE /vehicle/{id} (MECHANIC & ADMIN)")
 
-	router.Handle("/vehicle/customer/{customerId}", r.authMiddleware.Authenticate(http.HandlerFunc(r.vehicleController.FindByCustomerId))).Methods("GET")
-	r.logger.Info("Route registered: GET /vehicle/customer/{customerId} (PROTECTED)")
+	router.Handle("/vehicle/customer/{customerId}", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.vehicleController.FindByCustomerId)))).Methods("GET")
+	r.logger.Info("Route registered: GET /vehicle/customer/{customerId} (MECHANIC & ADMIN)")
 
-	// Rotas do Input (protegidas)
-	router.Handle("/input", r.authMiddleware.Authenticate(http.HandlerFunc(r.inputController.Create))).Methods("POST")
-	r.logger.Info("Route registered: POST /input (PROTECTED)")
+	// Input routes - mechanic e admin
+	router.Handle("/input", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.inputController.Create)))).Methods("POST")
+	r.logger.Info("Route registered: POST /input (MECHANIC & ADMIN)")
 
-	router.Handle("/input", r.authMiddleware.Authenticate(http.HandlerFunc(r.inputController.FindAll))).Methods("GET")
-	r.logger.Info("Route registered: GET /input (PROTECTED)")
+	router.Handle("/input", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.inputController.FindAll)))).Methods("GET")
+	r.logger.Info("Route registered: GET /input (MECHANIC & ADMIN)")
 
-	router.Handle("/input/{id}", r.authMiddleware.Authenticate(http.HandlerFunc(r.inputController.FindById))).Methods("GET")
-	r.logger.Info("Route registered: GET /input/{id} (PROTECTED)")
+	router.Handle("/input/{id}", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.inputController.FindById)))).Methods("GET")
+	r.logger.Info("Route registered: GET /input/{id} (MECHANIC & ADMIN)")
 
-	router.Handle("/input/{id}", r.authMiddleware.Authenticate(http.HandlerFunc(r.inputController.UpdateById))).Methods("PUT")
-	r.logger.Info("Route registered: PUT /input/{id} (PROTECTED)")
+	router.Handle("/input/{id}", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.inputController.UpdateById)))).Methods("PUT")
+	r.logger.Info("Route registered: PUT /input/{id} (MECHANIC & ADMIN)")
 
-	router.Handle("/input/{id}", r.authMiddleware.Authenticate(http.HandlerFunc(r.inputController.DeleteById))).Methods("DELETE")
-	r.logger.Info("Route registered: DELETE /input/{id} (PROTECTED)")
+	router.Handle("/input/{id}", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.inputController.DeleteById)))).Methods("DELETE")
+	r.logger.Info("Route registered: DELETE /input/{id} (MECHANIC & ADMIN)")
 
-	// Rotas do Order (protegidas)
-	router.Handle("/order", r.authMiddleware.Authenticate(http.HandlerFunc(r.orderController.Create))).Methods("POST")
-	r.logger.Info("Route registered: POST /order (PROTECTED)")
+	// Order routes - mechanic e admin
+	router.Handle("/order", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.orderController.Create)))).Methods("POST")
+	r.logger.Info("Route registered: POST /order (MECHANIC & ADMIN)")
 
-	router.Handle("/order/{orderId}/input", r.authMiddleware.Authenticate(http.HandlerFunc(r.orderController.AddInputToOrder))).Methods("POST")
-	r.logger.Info("Route registered: POST /order/{orderId}/input (PROTECTED)")
+	router.Handle("/order/{orderId}/input", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.orderController.AddInputToOrder)))).Methods("POST")
+	r.logger.Info("Route registered: POST /order/{orderId}/input (MECHANIC & ADMIN)")
 
-	router.Handle("/order/{orderId}/input/remove", r.authMiddleware.Authenticate(http.HandlerFunc(r.orderController.RemoveInputFromOrder))).Methods("POST")
-	r.logger.Info("Route registered: POST /order/{orderId}/input/remove (PROTECTED)")
+	router.Handle("/order/{orderId}/input/remove", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.orderController.RemoveInputFromOrder)))).Methods("POST")
+	r.logger.Info("Route registered: POST /order/{orderId}/input/remove (MECHANIC & ADMIN)")
 
-	router.Handle("/order/{orderId}/completed", r.authMiddleware.Authenticate(http.HandlerFunc(r.orderController.FindCompletedOrderById))).Methods("GET")
-	r.logger.Info("Route registered: GET /order/{orderId}/completed (PROTECTED)")
+	router.Handle("/order/{orderId}/status", r.authMiddleware.Authenticate(r.authzMiddleware.RequireMechanicOrAdmin(http.HandlerFunc(r.orderController.UpdateOrderStatus)))).Methods("PUT")
+	r.logger.Info("Route registered: PUT /order/{orderId}/status (MECHANIC & ADMIN)")
 
-	router.Handle("/order/{orderId}/status", r.authMiddleware.Authenticate(http.HandlerFunc(r.orderController.UpdateOrderStatus))).Methods("PUT")
-	r.logger.Info("Route registered: PUT /order/{orderId}/status (PROTECTED)")
+	// Order overview - todos os tipos de usuário podem acessar
+	router.Handle("/order/{orderId}/overview", r.authMiddleware.Authenticate(http.HandlerFunc(r.orderController.FindOrderOverviewById))).Methods("GET")
+	r.logger.Info("Route registered: GET /order/{orderId}/overview (ALL AUTHENTICATED USERS)")
 
 	r.logger.Info("All routes registered successfully")
 }

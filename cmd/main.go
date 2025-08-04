@@ -69,9 +69,9 @@ func main() {
 	logger.Info("Initializing the application...")
 	r := mux.NewRouter()
 
-	customerController, healthController, userController, authController, vehicleController, inputController, orderController, authMiddleware := InitInstances()
+	customerController, healthController, userController, authController, vehicleController, inputController, orderController, authMiddleware, authzMiddleware := InitInstances()
 
-	rt := routes.NewRouter(logger, customerController, userController, authController, healthController, vehicleController, inputController, orderController, authMiddleware)
+	rt := routes.NewRouter(logger, customerController, userController, authController, healthController, vehicleController, inputController, orderController, authMiddleware, authzMiddleware)
 	rt.SetupRouter(r)
 
 	logger.Info("Server starting", zap.String("port", httpPort))
@@ -87,7 +87,7 @@ func getCurrentDir() string {
 	return dir
 }
 
-func InitInstances() (*controller.CustomerController, *controller.HealthController, *controller.UserController, *controller.AuthController, *controller.VehicleController, *controller.InputController, *controller.OrderController, *middleware.AuthMiddleware) {
+func InitInstances() (*controller.CustomerController, *controller.HealthController, *controller.UserController, *controller.AuthController, *controller.VehicleController, *controller.InputController, *controller.OrderController, *middleware.AuthMiddleware, *middleware.AuthorizationMiddleware) {
 	createCustomerUC := &customer.CreateCustomer{DB: db.DB, Logger: logger}
 	findAllCustomerUC := &customer.FindAllCustomer{DB: db.DB, Logger: logger}
 	findByIdCustomerUC := &customer.FindByIdCustomer{DB: db.DB, Logger: logger}
@@ -145,7 +145,7 @@ func InitInstances() (*controller.CustomerController, *controller.HealthControll
 		Logger:               logger,
 		StatusHistoryManager: manageOrderStatusHistoryUC,
 	}
-	findCompletedOrderByIdUC := &order.FindCompletedOrderById{DB: db.DB, Logger: logger}
+	findOrderOverviewByIdUC := &order.FindOrderOverviewById{DB: db.DB, Logger: logger}
 
 	updateOrderStatusUC := &order.UpdateOrderStatus{
 		DB:                   db.DB,
@@ -170,12 +170,12 @@ func InitInstances() (*controller.CustomerController, *controller.HealthControll
 	}
 
 	orderController := &controller.OrderController{
-		Logger:                   logger,
-		CreateOrder:              createOrderUC,
-		FindCompletedOrderByIdUC: findCompletedOrderByIdUC,
-		UpdateOrderStatusUC:      updateOrderStatusUC,
-		AddInputToOrderUC:        addInputToOrderUC,
-		RemoveInputFromOrderUC:   removeInputFromOrderUC,
+		Logger:                  logger,
+		CreateOrder:             createOrderUC,
+		FindOrderOverviewByIdUC: findOrderOverviewByIdUC,
+		UpdateOrderStatusUC:     updateOrderStatusUC,
+		AddInputToOrderUC:       addInputToOrderUC,
+		RemoveInputFromOrderUC:  removeInputFromOrderUC,
 	}
 
 	// Auth components
@@ -190,8 +190,9 @@ func InitInstances() (*controller.CustomerController, *controller.HealthControll
 
 	// Auth middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtService, logger)
+	authzMiddleware := middleware.NewAuthorizationMiddleware(logger)
 
 	healthController := &controller.HealthController{}
 
-	return customerController, healthController, userController, authController, vehicleController, inputController, orderController, authMiddleware
+	return customerController, healthController, userController, authController, vehicleController, inputController, orderController, authMiddleware, authzMiddleware
 }

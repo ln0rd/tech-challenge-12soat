@@ -29,12 +29,12 @@ const (
 )
 
 type OrderController struct {
-	Logger                   *zap.Logger
-	CreateOrder              *order.CreateOrder
-	AddInputToOrderUC        *order_input.AddInputToOrder
-	RemoveInputFromOrderUC   *order_input.RemoveInputFromOrder
-	FindCompletedOrderByIdUC *order.FindCompletedOrderById
-	UpdateOrderStatusUC      *order.UpdateOrderStatus
+	Logger                  *zap.Logger
+	CreateOrder             *order.CreateOrder
+	AddInputToOrderUC       *order_input.AddInputToOrder
+	RemoveInputFromOrderUC  *order_input.RemoveInputFromOrder
+	FindOrderOverviewByIdUC *order.FindOrderOverviewById
+	UpdateOrderStatusUC     *order.UpdateOrderStatus
 }
 
 type OrderDTO struct {
@@ -380,12 +380,12 @@ func (oc *OrderController) RemoveInputFromOrder(w http.ResponseWriter, r *http.R
 	})
 }
 
-func (oc *OrderController) FindCompletedOrderById(w http.ResponseWriter, r *http.Request) {
+func (oc *OrderController) FindOrderOverviewById(w http.ResponseWriter, r *http.Request) {
 	// Extrai o order ID da URL
 	vars := mux.Vars(r)
 	orderIDStr := vars["orderId"]
 
-	oc.Logger.Info("Received find completed order by ID request", zap.String("orderID", orderIDStr))
+	oc.Logger.Info("Received find order overview by ID request", zap.String("orderID", orderIDStr))
 
 	// Parse order ID
 	orderID, err := uuid.Parse(orderIDStr)
@@ -396,8 +396,8 @@ func (oc *OrderController) FindCompletedOrderById(w http.ResponseWriter, r *http
 	}
 	oc.Logger.Info("Order ID parsed successfully", zap.String("orderID", orderID.String()))
 
-	oc.Logger.Info("Calling FindCompletedOrderById.Process...")
-	result, err := oc.FindCompletedOrderByIdUC.Process(orderID)
+	oc.Logger.Info("Calling FindOrderOverviewById.Process...")
+	result, err := oc.FindOrderOverviewByIdUC.Process(orderID)
 	if err != nil {
 		oc.Logger.Error("Error finding completed order by ID", zap.Error(err))
 

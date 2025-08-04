@@ -60,10 +60,7 @@ func (am *AuthMiddleware) Authenticate(next http.Handler) http.Handler {
 
 		// Adiciona as claims ao contexto da requisição
 		ctx := r.Context()
-		ctx = context.WithValue(ctx, "user_id", claims.UserID)
-		ctx = context.WithValue(ctx, "email", claims.Email)
-		ctx = context.WithValue(ctx, "username", claims.Username)
-		ctx = context.WithValue(ctx, "user_type", claims.UserType)
+		ctx = context.WithValue(ctx, "claims", claims)
 
 		// Chama o próximo handler com o contexto atualizado
 		next.ServeHTTP(w, r.WithContext(ctx))

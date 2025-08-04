@@ -11,7 +11,7 @@ import (
 	"gorm.io/gorm"
 )
 
-type FindCompletedOrderById struct {
+type FindOrderOverviewById struct {
 	DB     *gorm.DB
 	Logger *zap.Logger
 }
@@ -72,7 +72,7 @@ func formatDurationFromSeconds(seconds int) string {
 }
 
 // Calcula timeline e tempo médio baseado no histórico de status
-func (uc *FindCompletedOrderById) calculateTimeline(orderID uuid.UUID) (map[string]string, string) {
+func (uc *FindOrderOverviewById) calculateTimeline(orderID uuid.UUID) (map[string]string, string) {
 	var history []models.OrderStatusHistory
 
 	if err := uc.DB.Where("order_id = ? ORDER BY started_at ASC", orderID).Find(&history).Error; err != nil {
@@ -130,7 +130,7 @@ func (uc *FindCompletedOrderById) calculateTimeline(orderID uuid.UUID) (map[stri
 	return timeline, averageTime
 }
 
-func (uc *FindCompletedOrderById) Process(orderID uuid.UUID) (*OrderWithInputs, error) {
+func (uc *FindOrderOverviewById) Process(orderID uuid.UUID) (*OrderWithInputs, error) {
 	uc.Logger.Info("Processing find completed order by ID", zap.String("orderID", orderID.String()))
 
 	// Busca a order

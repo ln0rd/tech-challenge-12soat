@@ -5,7 +5,7 @@ CREATE TABLE "users" (
     email VARCHAR NOT NULL UNIQUE,
     password VARCHAR NOT NULL,
     username VARCHAR NOT NULL,
-    user_type VARCHAR NOT NULL,
+    user_type VARCHAR NOT NULL CHECK (user_type IN ('admin', 'mechanic', 'vehicle_owner')),
     customer_id UUID,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP

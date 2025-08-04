@@ -16,7 +16,7 @@ var (
 	usernameRegex = regexp.MustCompile(`^[a-zA-Z0-9_]{3,20}$`)
 	emailRegex    = regexp.MustCompile(`^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$`)
 	passwordRegex = regexp.MustCompile(`^.{6,}$`)
-	userTypeRegex = regexp.MustCompile(`^(admin|customer)$`)
+	userTypeRegex = regexp.MustCompile(`^(admin|mechanic|vehicle_owner)$`)
 )
 
 const (
@@ -48,7 +48,7 @@ func (dto *UserDTO) Validate() error {
 		return errors.New("password must be at least 6 characters long")
 	}
 	if !userTypeRegex.MatchString(dto.UserType) {
-		return errors.New("userType must be 'admin' or 'customer'")
+		return errors.New("userType must be 'admin', 'mechanic', or 'vehicle_owner'")
 	}
 	return nil
 }
