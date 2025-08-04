@@ -14,47 +14,53 @@ type DecreaseQuantityInput struct {
 	Logger *zap.Logger
 }
 
-func (uc *DecreaseQuantityInput) Process(id uuid.UUID, quantity int) error {
-	uc.Logger.Info("Processing decrease quantity for input",
-		zap.String("id", id.String()),
-		zap.Int("quantityToDecrease", quantity))
-
-	// Verifica se o input existe
+// FetchInputFromDB busca um input específico do banco de dados
+func (uc *DecreaseQuantityInput) FetchInputFromDB(id uuid.UUID) (*models.Input, error) {
 	var input models.Input
 	if err := uc.DB.Where("id = ?", id).First(&input).Error; err != nil {
 		uc.Logger.Error("Input not found", zap.String("id", id.String()))
-		return errors.New("input not found")
+		return nil, errors.New("input not found")
 	}
 
 	uc.Logger.Info("Found input",
 		zap.String("id", input.ID.String()),
 		zap.String("name", input.Name),
-		zap.Int("currentQuantity", input.Quantity),
-		zap.Int("quantityToDecrease", quantity))
+		zap.Int("currentQuantity", input.Quantity))
 
-	// Valida se a quantidade a diminuir é válida
+	return &input, nil
+}
+
+// ValidateQuantityToDecrease valida se a quantidade a diminuir é válida
+func (uc *DecreaseQuantityInput) ValidateQuantityToDecrease(quantity int) error {
 	if quantity <= 0 {
 		uc.Logger.Error("Invalid quantity to decrease", zap.Int("quantity", quantity))
 		return errors.New("quantity to decrease must be greater than zero")
 	}
+	return nil
+}
 
-	// Calcula a nova quantidade
-	newQuantity := input.Quantity - quantity
+// CalculateNewQuantity calcula a nova quantidade após a diminuição
+func (uc *DecreaseQuantityInput) CalculateNewQuantity(currentQuantity, quantityToDecrease int) (int, error) {
+	newQuantity := currentQuantity - quantityToDecrease
 	if newQuantity < 0 {
 		uc.Logger.Error("Insufficient quantity",
-			zap.Int("currentQuantity", input.Quantity),
-			zap.Int("quantityToDecrease", quantity),
+			zap.Int("currentQuantity", currentQuantity),
+			zap.Int("quantityToDecrease", quantityToDecrease),
 			zap.Int("newQuantity", newQuantity))
-		return errors.New("insufficient quantity")
+		return 0, errors.New("insufficient quantity")
 	}
 
 	uc.Logger.Info("Calculated new quantity",
-		zap.Int("currentQuantity", input.Quantity),
-		zap.Int("quantityToDecrease", quantity),
+		zap.Int("currentQuantity", currentQuantity),
+		zap.Int("quantityToDecrease", quantityToDecrease),
 		zap.Int("newQuantity", newQuantity))
 
-	// Atualiza a quantidade
-	result := uc.DB.Model(&input).Update("quantity", newQuantity)
+	return newQuantity, nil
+}
+
+// UpdateInputQuantity atualiza a quantidade do input no banco de dados
+func (uc *DecreaseQuantityInput) UpdateInputQuantity(input *models.Input, newQuantity int) error {
+	result := uc.DB.Model(input).Update("quantity", newQuantity)
 	if result.Error != nil {
 		uc.Logger.Error("Database error updating input quantity", zap.Error(result.Error))
 		return result.Error
@@ -66,6 +72,37 @@ func (uc *DecreaseQuantityInput) Process(id uuid.UUID, quantity int) error {
 		zap.Int("oldQuantity", input.Quantity),
 		zap.Int("newQuantity", newQuantity),
 		zap.Int64("rowsAffected", result.RowsAffected))
+
+	return nil
+}
+
+func (uc *DecreaseQuantityInput) Process(id uuid.UUID, quantity int) error {
+	uc.Logger.Info("Processing decrease quantity for input",
+		zap.String("id", id.String()),
+		zap.Int("quantityToDecrease", quantity))
+
+	// Valida quantidade a diminuir
+	if err := uc.ValidateQuantityToDecrease(quantity); err != nil {
+		return err
+	}
+
+	// Busca o input
+	input, err := uc.FetchInputFromDB(id)
+	if err != nil {
+		return err
+	}
+
+	// Calcula nova quantidade
+	newQuantity, err := uc.CalculateNewQuantity(input.Quantity, quantity)
+	if err != nil {
+		return err
+	}
+
+	// Atualiza a quantidade
+	err = uc.UpdateInputQuantity(input, newQuantity)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }
