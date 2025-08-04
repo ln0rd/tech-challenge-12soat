@@ -15,69 +15,51 @@ type ManageOrderStatusHistory struct {
 	Logger *zap.Logger
 }
 
-// Finaliza o status atual e inicia um novo
-func (uc *ManageOrderStatusHistory) UpdateStatus(orderID uuid.UUID, newStatus string) error {
-	uc.Logger.Info("Managing order status history",
-		zap.String("orderID", orderID.String()),
-		zap.String("newStatus", newStatus))
-
-	// Verifica se é um status final
-	isFinalStatus := newStatus == "Delivered" || newStatus == "Canceled"
-
-	if isFinalStatus {
-		uc.Logger.Info("Status is final, updating current status instead of creating new one",
-			zap.String("orderID", orderID.String()),
-			zap.String("newStatus", newStatus))
-
-		// Para status finais, apenas atualiza o status atual
-		err := uc.updateCurrentStatusToFinal(orderID, newStatus)
-		if err != nil {
-			uc.Logger.Error("Error updating current status to final", zap.Error(err))
-			return err
-		}
-	} else {
-		// Finaliza o status atual (se existir)
-		err := uc.finalizeCurrentStatus(orderID)
-		if err != nil {
-			uc.Logger.Error("Error finalizing current status", zap.Error(err))
-			return err
-		}
-
-		// Inicia o novo status
-		err = uc.StartNewStatus(orderID, newStatus)
-		if err != nil {
-			uc.Logger.Error("Error starting new status", zap.Error(err))
-			return err
-		}
-	}
-
-	uc.Logger.Info("Order status history updated successfully",
-		zap.String("orderID", orderID.String()),
-		zap.String("newStatus", newStatus),
-		zap.Bool("isFinalStatus", isFinalStatus))
-
-	return nil
+// IsFinalStatus verifica se o status é final
+func (uc *ManageOrderStatusHistory) IsFinalStatus(status string) bool {
+	return status == "Delivered" || status == "Canceled"
 }
 
-// Finaliza o status atual
-func (uc *ManageOrderStatusHistory) finalizeCurrentStatus(orderID uuid.UUID) error {
-	// Busca o status atual (sem ended_at)
+// FetchCurrentStatusFromDB busca o status atual do banco de dados
+func (uc *ManageOrderStatusHistory) FetchCurrentStatusFromDB(orderID uuid.UUID) (*models.OrderStatusHistory, error) {
 	var currentStatus models.OrderStatusHistory
 	if err := uc.DB.Where("order_id = ? AND ended_at IS NULL", orderID).First(&currentStatus).Error; err != nil {
 		if err == gorm.ErrRecordNotFound {
-			// Não há status atual, isso é normal para a primeira mudança
-			uc.Logger.Info("No current status found, this is normal for first status change",
+			uc.Logger.Info("No current status found",
 				zap.String("orderID", orderID.String()))
-			return nil
+			return nil, nil
 		}
+		uc.Logger.Error("Error fetching current status", zap.Error(err))
+		return nil, err
+	}
+
+	uc.Logger.Info("Current status found",
+		zap.String("orderID", orderID.String()),
+		zap.String("status", currentStatus.Status),
+		zap.Time("startedAt", currentStatus.StartedAt))
+
+	return &currentStatus, nil
+}
+
+// FinalizeCurrentStatus finaliza o status atual
+func (uc *ManageOrderStatusHistory) FinalizeCurrentStatus(orderID uuid.UUID) error {
+	currentStatus, err := uc.FetchCurrentStatusFromDB(orderID)
+	if err != nil {
 		return err
+	}
+
+	if currentStatus == nil {
+		// Não há status atual, isso é normal para a primeira mudança
+		uc.Logger.Info("No current status found, this is normal for first status change",
+			zap.String("orderID", orderID.String()))
+		return nil
 	}
 
 	// Calcula a duração
 	now := time.Now()
 
 	// Atualiza o registro atual
-	result := uc.DB.Model(&currentStatus).Updates(map[string]interface{}{
+	result := uc.DB.Model(currentStatus).Updates(map[string]interface{}{
 		"ended_at": now,
 	})
 
@@ -95,8 +77,8 @@ func (uc *ManageOrderStatusHistory) finalizeCurrentStatus(orderID uuid.UUID) err
 	return nil
 }
 
-// Inicia um novo status
-func (uc *ManageOrderStatusHistory) StartNewStatus(orderID uuid.UUID, status string) error {
+// CreateNewStatus cria um novo status
+func (uc *ManageOrderStatusHistory) CreateNewStatus(orderID uuid.UUID, status string) error {
 	now := time.Now()
 
 	newStatusHistory := &models.OrderStatusHistory{
@@ -120,34 +102,18 @@ func (uc *ManageOrderStatusHistory) StartNewStatus(orderID uuid.UUID, status str
 	return nil
 }
 
-// Busca o histórico completo de uma order
-func (uc *ManageOrderStatusHistory) GetOrderHistory(orderID uuid.UUID) ([]models.OrderStatusHistory, error) {
-	var history []models.OrderStatusHistory
-
-	if err := uc.DB.Where("order_id = ? ORDER BY started_at ASC", orderID).Find(&history).Error; err != nil {
-		uc.Logger.Error("Error fetching order history", zap.Error(err))
-		return nil, err
+// UpdateCurrentStatusToFinal atualiza o status atual para um status final
+func (uc *ManageOrderStatusHistory) UpdateCurrentStatusToFinal(orderID uuid.UUID, finalStatus string) error {
+	currentStatus, err := uc.FetchCurrentStatusFromDB(orderID)
+	if err != nil {
+		return err
 	}
 
-	uc.Logger.Info("Order history retrieved",
-		zap.String("orderID", orderID.String()),
-		zap.Int("historyCount", len(history)))
-
-	return history, nil
-}
-
-// Atualiza o status atual para um status final (Delivered ou Canceled)
-func (uc *ManageOrderStatusHistory) updateCurrentStatusToFinal(orderID uuid.UUID, finalStatus string) error {
-	// Busca o status atual (sem ended_at)
-	var currentStatus models.OrderStatusHistory
-	if err := uc.DB.Where("order_id = ? AND ended_at IS NULL", orderID).First(&currentStatus).Error; err != nil {
-		if err == gorm.ErrRecordNotFound {
-			uc.Logger.Error("No current status found for final status update",
-				zap.String("orderID", orderID.String()),
-				zap.String("finalStatus", finalStatus))
-			return errors.New("no current status found")
-		}
-		return err
+	if currentStatus == nil {
+		uc.Logger.Error("No current status found for final status update",
+			zap.String("orderID", orderID.String()),
+			zap.String("finalStatus", finalStatus))
+		return errors.New("no current status found")
 	}
 
 	uc.Logger.Info("Current status found for final update",
@@ -160,7 +126,7 @@ func (uc *ManageOrderStatusHistory) updateCurrentStatusToFinal(orderID uuid.UUID
 	now := time.Now()
 
 	// Atualiza o registro atual com o status final
-	result := uc.DB.Model(&currentStatus).Updates(map[string]interface{}{
+	result := uc.DB.Model(currentStatus).Updates(map[string]interface{}{
 		"status":   finalStatus,
 		"ended_at": now,
 	})
@@ -179,4 +145,74 @@ func (uc *ManageOrderStatusHistory) updateCurrentStatusToFinal(orderID uuid.UUID
 		zap.Int64("rowsAffected", result.RowsAffected))
 
 	return nil
+}
+
+// FetchOrderHistoryFromDB busca o histórico completo de uma order do banco de dados
+func (uc *ManageOrderStatusHistory) FetchOrderHistoryFromDB(orderID uuid.UUID) ([]models.OrderStatusHistory, error) {
+	var history []models.OrderStatusHistory
+
+	if err := uc.DB.Where("order_id = ? ORDER BY started_at ASC", orderID).Find(&history).Error; err != nil {
+		uc.Logger.Error("Error fetching order history", zap.Error(err))
+		return nil, err
+	}
+
+	uc.Logger.Info("Order history retrieved",
+		zap.String("orderID", orderID.String()),
+		zap.Int("historyCount", len(history)))
+
+	return history, nil
+}
+
+// StartNewStatus inicia um novo status
+func (uc *ManageOrderStatusHistory) StartNewStatus(orderID uuid.UUID, status string) error {
+	return uc.CreateNewStatus(orderID, status)
+}
+
+// UpdateStatus finaliza o status atual e inicia um novo
+func (uc *ManageOrderStatusHistory) UpdateStatus(orderID uuid.UUID, newStatus string) error {
+	uc.Logger.Info("Managing order status history",
+		zap.String("orderID", orderID.String()),
+		zap.String("newStatus", newStatus))
+
+	// Verifica se é um status final
+	isFinalStatus := uc.IsFinalStatus(newStatus)
+
+	if isFinalStatus {
+		uc.Logger.Info("Status is final, updating current status instead of creating new one",
+			zap.String("orderID", orderID.String()),
+			zap.String("newStatus", newStatus))
+
+		// Para status finais, apenas atualiza o status atual
+		err := uc.UpdateCurrentStatusToFinal(orderID, newStatus)
+		if err != nil {
+			uc.Logger.Error("Error updating current status to final", zap.Error(err))
+			return err
+		}
+	} else {
+		// Finaliza o status atual (se existir)
+		err := uc.FinalizeCurrentStatus(orderID)
+		if err != nil {
+			uc.Logger.Error("Error finalizing current status", zap.Error(err))
+			return err
+		}
+
+		// Inicia o novo status
+		err = uc.StartNewStatus(orderID, newStatus)
+		if err != nil {
+			uc.Logger.Error("Error starting new status", zap.Error(err))
+			return err
+		}
+	}
+
+	uc.Logger.Info("Order status history updated successfully",
+		zap.String("orderID", orderID.String()),
+		zap.String("newStatus", newStatus),
+		zap.Bool("isFinalStatus", isFinalStatus))
+
+	return nil
+}
+
+// GetOrderHistory busca o histórico completo de uma order
+func (uc *ManageOrderStatusHistory) GetOrderHistory(orderID uuid.UUID) ([]models.OrderStatusHistory, error) {
+	return uc.FetchOrderHistoryFromDB(orderID)
 }
