@@ -12,9 +12,8 @@ type DeleteByIdVehicle struct {
 	Logger *zap.Logger
 }
 
-func (uc *DeleteByIdVehicle) Process(id uuid.UUID) error {
-	uc.Logger.Info("Processing delete vehicle by ID", zap.String("id", id.String()))
-
+// DeleteVehicleFromDB remove o vehicle do banco de dados
+func (uc *DeleteByIdVehicle) DeleteVehicleFromDB(id uuid.UUID) error {
 	result := uc.DB.Where("id = ?", id).Delete(&models.Vehicle{})
 	if result.Error != nil {
 		uc.Logger.Error("Database error deleting vehicle", zap.Error(result.Error), zap.String("id", id.String()))
@@ -27,6 +26,17 @@ func (uc *DeleteByIdVehicle) Process(id uuid.UUID) error {
 	}
 
 	uc.Logger.Info("Vehicle deleted successfully", zap.String("id", id.String()), zap.Int64("rowsAffected", result.RowsAffected))
+	return nil
+}
+
+func (uc *DeleteByIdVehicle) Process(id uuid.UUID) error {
+	uc.Logger.Info("Processing delete vehicle by ID", zap.String("id", id.String()))
+
+	// Remove o vehicle do banco
+	err := uc.DeleteVehicleFromDB(id)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

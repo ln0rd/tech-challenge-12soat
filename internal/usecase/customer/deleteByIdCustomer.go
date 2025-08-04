@@ -12,9 +12,8 @@ type DeleteByIdCustomer struct {
 	Logger *zap.Logger
 }
 
-func (uc *DeleteByIdCustomer) Process(id uuid.UUID) error {
-	uc.Logger.Info("Processing delete customer by ID", zap.String("id", id.String()))
-
+// DeleteCustomerFromDB remove o customer do banco de dados
+func (uc *DeleteByIdCustomer) DeleteCustomerFromDB(id uuid.UUID) error {
 	result := uc.DB.Where("id = ?", id).Delete(&models.Customer{})
 	if result.Error != nil {
 		uc.Logger.Error("Database error deleting customer", zap.Error(result.Error), zap.String("id", id.String()))
@@ -27,6 +26,17 @@ func (uc *DeleteByIdCustomer) Process(id uuid.UUID) error {
 	}
 
 	uc.Logger.Info("Customer deleted successfully", zap.String("id", id.String()), zap.Int64("rowsAffected", result.RowsAffected))
+	return nil
+}
+
+func (uc *DeleteByIdCustomer) Process(id uuid.UUID) error {
+	uc.Logger.Info("Processing delete customer by ID", zap.String("id", id.String()))
+
+	// Remove o customer do banco
+	err := uc.DeleteCustomerFromDB(id)
+	if err != nil {
+		return err
+	}
 
 	return nil
 }

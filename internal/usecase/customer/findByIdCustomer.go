@@ -4,6 +4,7 @@ import (
 	"github.com/google/uuid"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/costumer"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
@@ -13,9 +14,8 @@ type FindByIdCustomer struct {
 	Logger *zap.Logger
 }
 
-func (uc *FindByIdCustomer) Process(id uuid.UUID) (*domain.Customer, error) {
-	uc.Logger.Info("Processing find customer by ID", zap.String("id", id.String()))
-
+// FetchCustomerFromDB busca um customer específico do banco de dados
+func (uc *FindByIdCustomer) FetchCustomerFromDB(id uuid.UUID) (*models.Customer, error) {
 	var customer models.Customer
 	if err := uc.DB.Where("id = ?", id).First(&customer).Error; err != nil {
 		uc.Logger.Error("Database error finding customer by ID", zap.Error(err), zap.String("id", id.String()))
@@ -23,17 +23,21 @@ func (uc *FindByIdCustomer) Process(id uuid.UUID) (*domain.Customer, error) {
 	}
 
 	uc.Logger.Info("Found customer in database", zap.String("id", customer.ID.String()), zap.String("name", customer.Name))
+	return &customer, nil
+}
 
-	domainCustomer := domain.Customer{
-		ID:             customer.ID,
-		Name:           customer.Name,
-		DocumentNumber: customer.DocumentNumber,
-		CustomerType:   customer.CustomerType,
-		CreatedAt:      customer.CreatedAt,
-		UpdatedAt:      customer.UpdatedAt,
+func (uc *FindByIdCustomer) Process(id uuid.UUID) (*domain.Customer, error) {
+	uc.Logger.Info("Processing find customer by ID", zap.String("id", id.String()))
+
+	// Busca customer do banco
+	customer, err := uc.FetchCustomerFromDB(id)
+	if err != nil {
+		return nil, err
 	}
 
+	// Mapeia para o domínio usando persistence
+	domainCustomer := persistence.CustomerPersistence{}.ToEntity(customer)
 	uc.Logger.Info("Successfully mapped customer to domain", zap.String("id", domainCustomer.ID.String()))
 
-	return &domainCustomer, nil
+	return domainCustomer, nil
 }
