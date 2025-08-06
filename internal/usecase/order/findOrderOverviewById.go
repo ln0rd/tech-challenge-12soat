@@ -5,15 +5,20 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/order"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type FindOrderOverviewById struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	OrderRepository              repository.OrderRepository
+	VehicleRepository            repository.VehicleRepository
+	OrderInputRepository         repository.OrderInputRepository
+	OrderStatusHistoryRepository repository.OrderStatusHistoryRepository
+	InputRepository              repository.InputRepository
+	Logger                       interfaces.Logger
 }
 
 type OrderWithInputs struct {
@@ -60,8 +65,8 @@ func FormatDurationFromSeconds(seconds int) string {
 
 // FetchOrderFromDB busca um order específico do banco de dados
 func (uc *FindOrderOverviewById) FetchOrderFromDB(orderID uuid.UUID) (*models.Order, error) {
-	var order models.Order
-	if err := uc.DB.Where("id = ?", orderID).First(&order).Error; err != nil {
+	order, err := uc.OrderRepository.FindByID(orderID)
+	if err != nil {
 		uc.Logger.Error("Order not found", zap.String("orderID", orderID.String()))
 		return nil, errors.New("order not found")
 	}
@@ -72,13 +77,13 @@ func (uc *FindOrderOverviewById) FetchOrderFromDB(orderID uuid.UUID) (*models.Or
 		zap.String("vehicleID", order.VehicleID.String()),
 		zap.String("status", order.Status))
 
-	return &order, nil
+	return order, nil
 }
 
 // FetchVehicleFromDB busca um vehicle específico do banco de dados
 func (uc *FindOrderOverviewById) FetchVehicleFromDB(vehicleID uuid.UUID) (*models.Vehicle, error) {
-	var vehicle models.Vehicle
-	if err := uc.DB.Where("id = ?", vehicleID).First(&vehicle).Error; err != nil {
+	vehicle, err := uc.VehicleRepository.FindByID(vehicleID)
+	if err != nil {
 		uc.Logger.Error("Vehicle not found",
 			zap.String("vehicleID", vehicleID.String()))
 		return nil, errors.New("vehicle not found")
@@ -90,18 +95,18 @@ func (uc *FindOrderOverviewById) FetchVehicleFromDB(vehicleID uuid.UUID) (*model
 		zap.String("brand", vehicle.Brand),
 		zap.String("numberPlate", vehicle.NumberPlate))
 
-	return &vehicle, nil
+	return vehicle, nil
 }
 
 // FetchOrderInputsFromDB busca os inputs da order do banco de dados
 func (uc *FindOrderOverviewById) FetchOrderInputsFromDB(orderID uuid.UUID) ([]models.OrderInput, error) {
-	var orderInputs []models.OrderInput
-	if err := uc.DB.Where("order_id = ?", orderID).Find(&orderInputs).Error; err != nil {
+	orderInputs, err := uc.OrderInputRepository.FindByOrderID(orderID)
+	if err != nil {
 		uc.Logger.Error("Database error finding order inputs", zap.Error(err))
 		return nil, err
 	}
 
-	uc.Logger.Info("Found order inputs", zap.Int("count", len(orderInputs)))
+	uc.Logger.Info("Order inputs found", zap.Int("count", len(orderInputs)))
 	return orderInputs, nil
 }
 
@@ -137,8 +142,8 @@ func (uc *FindOrderOverviewById) ProcessOrderInputs(orderInputs []models.OrderIn
 
 	for _, orderInput := range orderInputs {
 		// Busca o nome do input
-		var input models.Input
-		if err := uc.DB.Where("id = ?", orderInput.InputID).First(&input).Error; err != nil {
+		input, err := uc.InputRepository.FindByID(orderInput.InputID)
+		if err != nil {
 			uc.Logger.Error("Input not found for order input",
 				zap.String("inputID", orderInput.InputID.String()),
 				zap.String("orderInputID", orderInput.ID.String()))
@@ -175,9 +180,8 @@ func (uc *FindOrderOverviewById) MapOrderToDomain(order *models.Order) *domain.O
 
 // CalculateTimeline calcula timeline e tempo médio baseado no histórico de status
 func (uc *FindOrderOverviewById) CalculateTimeline(orderID uuid.UUID) (map[string]string, string) {
-	var history []models.OrderStatusHistory
-
-	if err := uc.DB.Where("order_id = ? ORDER BY started_at ASC", orderID).Find(&history).Error; err != nil {
+	history, err := uc.OrderStatusHistoryRepository.FindByOrderID(orderID)
+	if err != nil {
 		uc.Logger.Error("Error fetching order status history", zap.Error(err))
 		return make(map[string]string), "00:00:00"
 	}

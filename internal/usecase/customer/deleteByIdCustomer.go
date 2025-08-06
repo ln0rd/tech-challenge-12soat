@@ -2,30 +2,30 @@ package customer
 
 import (
 	"github.com/google/uuid"
-	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type DeleteByIdCustomer struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	CustomerRepository repository.CustomerRepository
+	Logger             interfaces.Logger
 }
 
-// DeleteCustomerFromDB remove o customer do banco de dados
+// DeleteCustomerFromDB remove o customer do banco
 func (uc *DeleteByIdCustomer) DeleteCustomerFromDB(id uuid.UUID) error {
-	result := uc.DB.Where("id = ?", id).Delete(&models.Customer{})
-	if result.Error != nil {
-		uc.Logger.Error("Database error deleting customer", zap.Error(result.Error), zap.String("id", id.String()))
-		return result.Error
+	err := uc.CustomerRepository.Delete(id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			uc.Logger.Error("Customer not found for deletion", zap.String("id", id.String()))
+			return err
+		}
+		uc.Logger.Error("Database error deleting customer", zap.Error(err), zap.String("id", id.String()))
+		return err
 	}
 
-	if result.RowsAffected == 0 {
-		uc.Logger.Warn("No customer found to delete", zap.String("id", id.String()))
-		return gorm.ErrRecordNotFound
-	}
-
-	uc.Logger.Info("Customer deleted successfully", zap.String("id", id.String()), zap.Int64("rowsAffected", result.RowsAffected))
+	uc.Logger.Info("Customer deleted from database", zap.String("id", id.String()))
 	return nil
 }
 

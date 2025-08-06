@@ -2,30 +2,25 @@ package input
 
 import (
 	"github.com/google/uuid"
-	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type DeleteByIdInput struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	InputRepository repository.InputRepository
+	Logger          interfaces.Logger
 }
 
 // DeleteInputFromDB remove o input do banco de dados
 func (uc *DeleteByIdInput) DeleteInputFromDB(id uuid.UUID) error {
-	result := uc.DB.Where("id = ?", id).Delete(&models.Input{})
-	if result.Error != nil {
-		uc.Logger.Error("Database error deleting input", zap.Error(result.Error), zap.String("id", id.String()))
-		return result.Error
+	err := uc.InputRepository.Delete(id)
+	if err != nil {
+		uc.Logger.Error("Database error deleting input", zap.Error(err), zap.String("id", id.String()))
+		return err
 	}
 
-	if result.RowsAffected == 0 {
-		uc.Logger.Warn("No input found to delete", zap.String("id", id.String()))
-		return gorm.ErrRecordNotFound
-	}
-
-	uc.Logger.Info("Input deleted successfully", zap.String("id", id.String()), zap.Int64("rowsAffected", result.RowsAffected))
+	uc.Logger.Info("Input deleted successfully", zap.String("id", id.String()))
 	return nil
 }
 

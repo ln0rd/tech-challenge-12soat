@@ -4,40 +4,43 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/order"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/order_status_history"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type CreateOrder struct {
-	DB                   *gorm.DB
-	Logger               *zap.Logger
+	OrderRepository      repository.OrderRepository
+	CustomerRepository   repository.CustomerRepository
+	VehicleRepository    repository.VehicleRepository
+	Logger               interfaces.Logger
 	StatusHistoryManager *order_status_history.ManageOrderStatusHistory
 }
 
 // FetchCustomerFromDB busca um customer específico do banco de dados
 func (uc *CreateOrder) FetchCustomerFromDB(customerID uuid.UUID) (*models.Customer, error) {
-	var existingCustomer models.Customer
-	if err := uc.DB.Where("id = ?", customerID).First(&existingCustomer).Error; err != nil {
+	customer, err := uc.CustomerRepository.FindByID(customerID)
+	if err != nil {
 		uc.Logger.Error("Customer not found", zap.String("customerID", customerID.String()))
 		return nil, errors.New("customer not found")
 	}
 	uc.Logger.Info("Customer found", zap.String("customerID", customerID.String()))
-	return &existingCustomer, nil
+	return customer, nil
 }
 
 // FetchVehicleFromDB busca um vehicle específico do banco de dados
 func (uc *CreateOrder) FetchVehicleFromDB(vehicleID uuid.UUID) (*models.Vehicle, error) {
-	var existingVehicle models.Vehicle
-	if err := uc.DB.Where("id = ?", vehicleID).First(&existingVehicle).Error; err != nil {
+	vehicle, err := uc.VehicleRepository.FindByID(vehicleID)
+	if err != nil {
 		uc.Logger.Error("Vehicle not found", zap.String("vehicleID", vehicleID.String()))
 		return nil, errors.New("vehicle not found")
 	}
 	uc.Logger.Info("Vehicle found", zap.String("vehicleID", vehicleID.String()))
-	return &existingVehicle, nil
+	return vehicle, nil
 }
 
 // ValidateVehicleOwnership valida se o vehicle pertence ao customer
@@ -54,15 +57,13 @@ func (uc *CreateOrder) ValidateVehicleOwnership(vehicle *models.Vehicle, custome
 
 // SaveOrderToDB salva o order no banco de dados
 func (uc *CreateOrder) SaveOrderToDB(model *models.Order) error {
-	result := uc.DB.Create(model)
-	if result.Error != nil {
-		uc.Logger.Error("Database error creating order", zap.Error(result.Error))
-		return result.Error
+	err := uc.OrderRepository.Create(model)
+	if err != nil {
+		uc.Logger.Error("Database error creating order", zap.Error(err))
+		return err
 	}
 
-	uc.Logger.Info("Order created in database",
-		zap.String("id", model.ID.String()),
-		zap.Int64("rowsAffected", result.RowsAffected))
+	uc.Logger.Info("Order created in database", zap.String("id", model.ID.String()))
 	return nil
 }
 

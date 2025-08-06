@@ -4,33 +4,36 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/input"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type AddInputToOrder struct {
-	DB                    *gorm.DB
-	Logger                *zap.Logger
+	OrderRepository       repository.OrderRepository
+	InputRepository       repository.InputRepository
+	OrderInputRepository  repository.OrderInputRepository
+	Logger                interfaces.Logger
 	DecreaseQuantityInput *input.DecreaseQuantityInput
 }
 
 // FetchOrderFromDB busca um order específico do banco de dados
 func (uc *AddInputToOrder) FetchOrderFromDB(orderID uuid.UUID) (*models.Order, error) {
-	var order models.Order
-	if err := uc.DB.Where("id = ?", orderID).First(&order).Error; err != nil {
+	order, err := uc.OrderRepository.FindByID(orderID)
+	if err != nil {
 		uc.Logger.Error("Order not found", zap.String("orderID", orderID.String()))
 		return nil, errors.New("order not found")
 	}
 	uc.Logger.Info("Order found", zap.String("orderID", orderID.String()), zap.String("status", order.Status))
-	return &order, nil
+	return order, nil
 }
 
 // FetchInputFromDB busca um input específico do banco de dados
 func (uc *AddInputToOrder) FetchInputFromDB(inputID uuid.UUID) (*models.Input, error) {
-	var input models.Input
-	if err := uc.DB.Where("id = ?", inputID).First(&input).Error; err != nil {
+	input, err := uc.InputRepository.FindByID(inputID)
+	if err != nil {
 		uc.Logger.Error("Input not found", zap.String("inputID", inputID.String()))
 		return nil, errors.New("input not found")
 	}
@@ -39,7 +42,7 @@ func (uc *AddInputToOrder) FetchInputFromDB(inputID uuid.UUID) (*models.Input, e
 		zap.String("name", input.Name),
 		zap.String("inputType", input.InputType),
 		zap.Int("availableQuantity", input.Quantity))
-	return &input, nil
+	return input, nil
 }
 
 // ValidateQuantity valida se a quantidade é válida
@@ -96,55 +99,60 @@ func (uc *AddInputToOrder) ValidateInputPrice(input *models.Input) (float64, err
 
 // FetchExistingOrderInput busca um order input existente
 func (uc *AddInputToOrder) FetchExistingOrderInput(orderID, inputID uuid.UUID) (*models.OrderInput, error) {
-	var existingOrderInput models.OrderInput
-	if err := uc.DB.Where("order_id = ? AND input_id = ?", orderID, inputID).First(&existingOrderInput).Error; err == nil {
-		uc.Logger.Info("Existing order input found",
-			zap.String("orderInputID", existingOrderInput.ID.String()),
-			zap.Int("currentQuantity", existingOrderInput.Quantity),
-			zap.Float64("currentTotalPrice", existingOrderInput.TotalPrice))
-		return &existingOrderInput, nil
-	} else if err != gorm.ErrRecordNotFound {
-		uc.Logger.Error("Database error checking existing order input", zap.Error(err))
+	// Busca todos os order inputs para este order
+	orderInputs, err := uc.OrderInputRepository.FindByOrderID(orderID)
+	if err != nil {
 		return nil, err
 	}
 
-	uc.Logger.Info("No existing order input found")
+	// Procura por um order input com o input_id específico
+	for _, orderInput := range orderInputs {
+		if orderInput.InputID == inputID {
+			uc.Logger.Info("Existing order input found",
+				zap.String("orderInputID", orderInput.ID.String()),
+				zap.String("orderID", orderInput.OrderID.String()),
+				zap.String("inputID", orderInput.InputID.String()),
+				zap.Int("currentQuantity", orderInput.Quantity),
+				zap.Float64("currentTotalPrice", orderInput.TotalPrice))
+			return &orderInput, nil
+		}
+	}
+
+	uc.Logger.Info("No existing order input found",
+		zap.String("orderID", orderID.String()),
+		zap.String("inputID", inputID.String()))
 	return nil, nil
 }
 
 // UpdateExistingOrderInput atualiza um order input existente
 func (uc *AddInputToOrder) UpdateExistingOrderInput(existingOrderInput *models.OrderInput, quantity int, unitPrice float64) error {
-	// Calcula a nova quantidade
+	// Calcula novos valores
 	newQuantity := existingOrderInput.Quantity + quantity
 	newTotalPrice := float64(newQuantity) * unitPrice
 
-	uc.Logger.Info("Calculated new values",
-		zap.Int("newQuantity", newQuantity),
-		zap.Float64("newTotalPrice", newTotalPrice))
+	// Atualiza o order input
+	existingOrderInput.Quantity = newQuantity
+	existingOrderInput.TotalPrice = newTotalPrice
 
-	// Atualiza o order_input existente
-	result := uc.DB.Model(existingOrderInput).Updates(map[string]interface{}{
-		"quantity":    newQuantity,
-		"total_price": newTotalPrice,
-	})
-	if result.Error != nil {
-		uc.Logger.Error("Database error updating order input", zap.Error(result.Error))
-		return result.Error
+	err := uc.OrderInputRepository.Update(existingOrderInput)
+	if err != nil {
+		uc.Logger.Error("Database error updating existing order input", zap.Error(err))
+		return err
 	}
 
-	uc.Logger.Info("OrderInput updated successfully in database",
-		zap.String("id", existingOrderInput.ID.String()),
-		zap.Int("oldQuantity", existingOrderInput.Quantity),
+	uc.Logger.Info("Existing order input updated successfully",
+		zap.String("orderInputID", existingOrderInput.ID.String()),
+		zap.Int("oldQuantity", existingOrderInput.Quantity-quantity),
 		zap.Int("newQuantity", newQuantity),
-		zap.Float64("oldTotalPrice", existingOrderInput.TotalPrice),
-		zap.Float64("newTotalPrice", newTotalPrice),
-		zap.Int64("rowsAffected", result.RowsAffected))
+		zap.Float64("oldTotalPrice", existingOrderInput.TotalPrice-float64(quantity)*unitPrice),
+		zap.Float64("newTotalPrice", newTotalPrice))
 
 	return nil
 }
 
 // DecreaseInputQuantity diminui a quantidade do input
 func (uc *AddInputToOrder) DecreaseInputQuantity(input *models.Input, quantity int) error {
+	// Para inputs do tipo "service", não diminuímos a quantidade
 	if input.InputType == "service" {
 		uc.Logger.Info("Skipping quantity decrease for service type",
 			zap.String("inputID", input.ID.String()),
@@ -153,33 +161,26 @@ func (uc *AddInputToOrder) DecreaseInputQuantity(input *models.Input, quantity i
 		return nil
 	}
 
-	uc.Logger.Info("Decreasing input quantity (not service type)",
-		zap.String("inputID", input.ID.String()),
-		zap.String("name", input.Name),
-		zap.String("inputType", input.InputType))
-
+	// Usa o usecase de decrease quantity
 	err := uc.DecreaseQuantityInput.Process(input.ID, quantity)
 	if err != nil {
 		uc.Logger.Error("Error decreasing input quantity", zap.Error(err))
 		return err
 	}
 
-	uc.Logger.Info("Input quantity decreased successfully")
+	uc.Logger.Info("Input quantity decreased successfully",
+		zap.String("inputID", input.ID.String()),
+		zap.String("name", input.Name),
+		zap.Int("quantityDecreased", quantity))
+
 	return nil
 }
 
 // CreateNewOrderInput cria um novo order input
 func (uc *AddInputToOrder) CreateNewOrderInput(orderID, inputID uuid.UUID, quantity int, unitPrice float64) error {
-	// Calcula o preço total
 	totalPrice := float64(quantity) * unitPrice
 
-	uc.Logger.Info("Calculated total price",
-		zap.Int("quantity", quantity),
-		zap.Float64("unitPrice", unitPrice),
-		zap.Float64("totalPrice", totalPrice))
-
-	// Cria o vínculo order_input
-	orderInput := &models.OrderInput{
+	newOrderInput := &models.OrderInput{
 		ID:         uuid.New(),
 		OrderID:    orderID,
 		InputID:    inputID,
@@ -188,24 +189,19 @@ func (uc *AddInputToOrder) CreateNewOrderInput(orderID, inputID uuid.UUID, quant
 		TotalPrice: totalPrice,
 	}
 
-	uc.Logger.Info("OrderInput model created",
-		zap.String("id", orderInput.ID.String()),
-		zap.String("orderID", orderInput.OrderID.String()),
-		zap.String("inputID", orderInput.InputID.String()),
-		zap.Int("quantity", orderInput.Quantity),
-		zap.Float64("unitPrice", orderInput.UnitPrice),
-		zap.Float64("totalPrice", orderInput.TotalPrice))
-
-	// Salva o vínculo no banco
-	result := uc.DB.Create(orderInput)
-	if result.Error != nil {
-		uc.Logger.Error("Database error creating order input", zap.Error(result.Error))
-		return result.Error
+	err := uc.OrderInputRepository.Create(newOrderInput)
+	if err != nil {
+		uc.Logger.Error("Database error creating new order input", zap.Error(err))
+		return err
 	}
 
-	uc.Logger.Info("OrderInput created successfully in database",
-		zap.String("id", orderInput.ID.String()),
-		zap.Int64("rowsAffected", result.RowsAffected))
+	uc.Logger.Info("New order input created successfully",
+		zap.String("orderInputID", newOrderInput.ID.String()),
+		zap.String("orderID", newOrderInput.OrderID.String()),
+		zap.String("inputID", newOrderInput.InputID.String()),
+		zap.Int("quantity", newOrderInput.Quantity),
+		zap.Float64("unitPrice", newOrderInput.UnitPrice),
+		zap.Float64("totalPrice", newOrderInput.TotalPrice))
 
 	return nil
 }

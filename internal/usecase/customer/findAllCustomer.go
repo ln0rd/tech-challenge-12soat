@@ -2,26 +2,27 @@ package customer
 
 import (
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/costumer"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type FindAllCustomer struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	CustomerRepository repository.CustomerRepository
+	Logger             interfaces.Logger
 }
 
-// FetchCustomersFromDB busca todos os customers do banco de dados
+// FetchCustomersFromDB busca todos os customers do banco
 func (uc *FindAllCustomer) FetchCustomersFromDB() ([]models.Customer, error) {
-	var customers []models.Customer
-	if err := uc.DB.Find(&customers).Error; err != nil {
-		uc.Logger.Error("Database error finding all customers", zap.Error(err))
+	customers, err := uc.CustomerRepository.FindAll()
+	if err != nil {
+		uc.Logger.Error("Database error fetching customers", zap.Error(err))
 		return nil, err
 	}
 
-	uc.Logger.Info("Found customers in database", zap.Int("count", len(customers)))
+	uc.Logger.Info("Successfully fetched customers from database", zap.Int("count", len(customers)))
 	return customers, nil
 }
 

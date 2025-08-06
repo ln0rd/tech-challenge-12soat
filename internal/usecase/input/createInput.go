@@ -4,21 +4,23 @@ import (
 	"errors"
 
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/input"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type CreateInput struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	InputRepository repository.InputRepository
+	Logger          interfaces.Logger
 }
 
 // ValidateInputNameUniqueness verifica se o nome do input é único
 func (uc *CreateInput) ValidateInputNameUniqueness(name string) error {
-	var existingInput models.Input
-	if err := uc.DB.Where("name = ?", name).First(&existingInput).Error; err == nil {
+	_, err := uc.InputRepository.FindByName(name)
+	if err == nil {
 		uc.Logger.Error("Input name already exists", zap.String("name", name))
 		return errors.New("input name already exists")
 	} else if err != gorm.ErrRecordNotFound {
@@ -32,16 +34,15 @@ func (uc *CreateInput) ValidateInputNameUniqueness(name string) error {
 
 // SaveInputToDB salva o input no banco de dados
 func (uc *CreateInput) SaveInputToDB(model *models.Input) error {
-	result := uc.DB.Create(model)
-	if result.Error != nil {
-		uc.Logger.Error("Database error creating input", zap.Error(result.Error))
-		return result.Error
+	err := uc.InputRepository.Create(model)
+	if err != nil {
+		uc.Logger.Error("Database error creating input", zap.Error(err))
+		return err
 	}
 
 	uc.Logger.Info("Input created in database",
 		zap.String("id", model.ID.String()),
-		zap.String("name", model.Name),
-		zap.Int64("rowsAffected", result.RowsAffected))
+		zap.String("name", model.Name))
 	return nil
 }
 

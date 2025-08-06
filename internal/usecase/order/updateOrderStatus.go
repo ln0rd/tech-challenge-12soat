@@ -4,15 +4,16 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/order_status_history"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type UpdateOrderStatus struct {
-	DB                   *gorm.DB
-	Logger               *zap.Logger
+	OrderRepository      repository.OrderRepository
+	Logger               interfaces.Logger
 	StatusHistoryManager *order_status_history.ManageOrderStatusHistory
 }
 
@@ -54,8 +55,8 @@ func (uc *UpdateOrderStatus) ValidateOrderStatus(newStatus string) error {
 
 // FetchOrderFromDB busca um order específico do banco de dados
 func (uc *UpdateOrderStatus) FetchOrderFromDB(orderID uuid.UUID) (*models.Order, error) {
-	var order models.Order
-	if err := uc.DB.Where("id = ?", orderID).First(&order).Error; err != nil {
+	order, err := uc.OrderRepository.FindByID(orderID)
+	if err != nil {
 		uc.Logger.Error("Order not found", zap.String("orderID", orderID.String()))
 		return nil, errors.New("order not found")
 	}
@@ -64,22 +65,24 @@ func (uc *UpdateOrderStatus) FetchOrderFromDB(orderID uuid.UUID) (*models.Order,
 		zap.String("orderID", order.ID.String()),
 		zap.String("currentStatus", order.Status))
 
-	return &order, nil
+	return order, nil
 }
 
 // UpdateOrderStatusInDB atualiza o status da order no banco de dados
 func (uc *UpdateOrderStatus) UpdateOrderStatusInDB(order *models.Order, newStatus string) error {
-	result := uc.DB.Model(order).Update("status", newStatus)
-	if result.Error != nil {
-		uc.Logger.Error("Database error updating order status", zap.Error(result.Error))
-		return result.Error
+	// Atualiza o status no modelo
+	order.Status = newStatus
+
+	err := uc.OrderRepository.Update(order)
+	if err != nil {
+		uc.Logger.Error("Database error updating order status", zap.Error(err))
+		return err
 	}
 
 	uc.Logger.Info("Order status updated successfully",
 		zap.String("orderID", order.ID.String()),
 		zap.String("oldStatus", order.Status),
-		zap.String("newStatus", newStatus),
-		zap.Int64("rowsAffected", result.RowsAffected))
+		zap.String("newStatus", newStatus))
 
 	return nil
 }

@@ -5,14 +5,16 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type ManageOrderStatusHistory struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	OrderStatusHistoryRepository repository.OrderStatusHistoryRepository
+	Logger                       interfaces.Logger
 }
 
 // IsFinalStatus verifica se o status é final
@@ -22,8 +24,8 @@ func (uc *ManageOrderStatusHistory) IsFinalStatus(status string) bool {
 
 // FetchCurrentStatusFromDB busca o status atual do banco de dados
 func (uc *ManageOrderStatusHistory) FetchCurrentStatusFromDB(orderID uuid.UUID) (*models.OrderStatusHistory, error) {
-	var currentStatus models.OrderStatusHistory
-	if err := uc.DB.Where("order_id = ? AND ended_at IS NULL", orderID).First(&currentStatus).Error; err != nil {
+	currentStatus, err := uc.OrderStatusHistoryRepository.FindCurrentByOrderID(orderID)
+	if err != nil {
 		if err == gorm.ErrRecordNotFound {
 			uc.Logger.Info("No current status found",
 				zap.String("orderID", orderID.String()))
@@ -38,7 +40,7 @@ func (uc *ManageOrderStatusHistory) FetchCurrentStatusFromDB(orderID uuid.UUID) 
 		zap.String("status", currentStatus.Status),
 		zap.Time("startedAt", currentStatus.StartedAt))
 
-	return &currentStatus, nil
+	return currentStatus, nil
 }
 
 // FinalizeCurrentStatus finaliza o status atual
@@ -59,13 +61,11 @@ func (uc *ManageOrderStatusHistory) FinalizeCurrentStatus(orderID uuid.UUID) err
 	now := time.Now()
 
 	// Atualiza o registro atual
-	result := uc.DB.Model(currentStatus).Updates(map[string]interface{}{
-		"ended_at": now,
-	})
-
-	if result.Error != nil {
-		uc.Logger.Error("Error updating current status", zap.Error(result.Error))
-		return result.Error
+	currentStatus.EndedAt = &now
+	err = uc.OrderStatusHistoryRepository.Update(currentStatus)
+	if err != nil {
+		uc.Logger.Error("Error updating current status", zap.Error(err))
+		return err
 	}
 
 	uc.Logger.Info("Current status finalized",
@@ -88,10 +88,10 @@ func (uc *ManageOrderStatusHistory) CreateNewStatus(orderID uuid.UUID, status st
 		StartedAt: now,
 	}
 
-	result := uc.DB.Create(newStatusHistory)
-	if result.Error != nil {
-		uc.Logger.Error("Error creating new status history", zap.Error(result.Error))
-		return result.Error
+	err := uc.OrderStatusHistoryRepository.Create(newStatusHistory)
+	if err != nil {
+		uc.Logger.Error("Error creating new status history", zap.Error(err))
+		return err
 	}
 
 	uc.Logger.Info("New status started",
@@ -126,14 +126,12 @@ func (uc *ManageOrderStatusHistory) UpdateCurrentStatusToFinal(orderID uuid.UUID
 	now := time.Now()
 
 	// Atualiza o registro atual com o status final
-	result := uc.DB.Model(currentStatus).Updates(map[string]interface{}{
-		"status":   finalStatus,
-		"ended_at": now,
-	})
-
-	if result.Error != nil {
-		uc.Logger.Error("Error updating current status to final", zap.Error(result.Error))
-		return result.Error
+	currentStatus.Status = finalStatus
+	currentStatus.EndedAt = &now
+	err = uc.OrderStatusHistoryRepository.Update(currentStatus)
+	if err != nil {
+		uc.Logger.Error("Error updating current status to final", zap.Error(err))
+		return err
 	}
 
 	uc.Logger.Info("Current status updated to final successfully",
@@ -141,17 +139,15 @@ func (uc *ManageOrderStatusHistory) UpdateCurrentStatusToFinal(orderID uuid.UUID
 		zap.String("oldStatus", currentStatus.Status),
 		zap.String("finalStatus", finalStatus),
 		zap.Time("startedAt", currentStatus.StartedAt),
-		zap.Time("endedAt", now),
-		zap.Int64("rowsAffected", result.RowsAffected))
+		zap.Time("endedAt", now))
 
 	return nil
 }
 
 // FetchOrderHistoryFromDB busca o histórico completo de uma order do banco de dados
 func (uc *ManageOrderStatusHistory) FetchOrderHistoryFromDB(orderID uuid.UUID) ([]models.OrderStatusHistory, error) {
-	var history []models.OrderStatusHistory
-
-	if err := uc.DB.Where("order_id = ? ORDER BY started_at ASC", orderID).Find(&history).Error; err != nil {
+	history, err := uc.OrderStatusHistoryRepository.FindByOrderID(orderID)
+	if err != nil {
 		uc.Logger.Error("Error fetching order history", zap.Error(err))
 		return nil, err
 	}

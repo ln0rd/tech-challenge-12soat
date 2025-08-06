@@ -2,22 +2,23 @@ package vehicle
 
 import (
 	"github.com/google/uuid"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/vehicle"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type FindByCustomerIdVehicle struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	VehicleRepository repository.VehicleRepository
+	Logger            interfaces.Logger
 }
 
 // FetchVehiclesFromDB busca vehicles por customer ID do banco de dados
 func (uc *FindByCustomerIdVehicle) FetchVehiclesFromDB(customerID uuid.UUID) ([]models.Vehicle, error) {
-	var vehicles []models.Vehicle
-	if err := uc.DB.Where("customer_id = ?", customerID).Find(&vehicles).Error; err != nil {
+	vehicles, err := uc.VehicleRepository.FindByCustomerID(customerID)
+	if err != nil {
 		uc.Logger.Error("Database error finding vehicles by customer ID", zap.Error(err), zap.String("customerID", customerID.String()))
 		return []models.Vehicle{}, err
 	}

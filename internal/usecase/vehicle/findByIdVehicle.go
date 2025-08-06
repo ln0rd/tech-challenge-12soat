@@ -2,22 +2,23 @@ package vehicle
 
 import (
 	"github.com/google/uuid"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/vehicle"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type FindByIdVehicle struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	VehicleRepository repository.VehicleRepository
+	Logger            interfaces.Logger
 }
 
 // FetchVehicleFromDB busca um vehicle específico do banco de dados
 func (uc *FindByIdVehicle) FetchVehicleFromDB(id uuid.UUID) (*models.Vehicle, error) {
-	var vehicle models.Vehicle
-	if err := uc.DB.Where("id = ?", id).First(&vehicle).Error; err != nil {
+	vehicle, err := uc.VehicleRepository.FindByID(id)
+	if err != nil {
 		uc.Logger.Error("Database error finding vehicle by ID", zap.Error(err), zap.String("id", id.String()))
 		return nil, err
 	}
@@ -28,7 +29,7 @@ func (uc *FindByIdVehicle) FetchVehicleFromDB(id uuid.UUID) (*models.Vehicle, er
 		zap.String("brand", vehicle.Brand),
 		zap.String("numberPlate", vehicle.NumberPlate))
 
-	return &vehicle, nil
+	return vehicle, nil
 }
 
 func (uc *FindByIdVehicle) Process(id uuid.UUID) (*domain.Vehicle, error) {

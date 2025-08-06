@@ -2,26 +2,27 @@ package customer
 
 import (
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/costumer"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type CreateCustomer struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	CustomerRepository repository.CustomerRepository
+	Logger             interfaces.Logger
 }
 
 // SaveCustomerToDB salva o customer no banco de dados
 func (uc *CreateCustomer) SaveCustomerToDB(model *models.Customer) error {
-	result := uc.DB.Create(model)
-	if result.Error != nil {
-		uc.Logger.Error("Database error creating customer", zap.Error(result.Error))
-		return result.Error
+	err := uc.CustomerRepository.Create(model)
+	if err != nil {
+		uc.Logger.Error("Database error creating customer", zap.Error(err))
+		return err
 	}
 
-	uc.Logger.Info("Customer created in database", zap.String("name", model.Name), zap.Int64("rowsAffected", result.RowsAffected))
+	uc.Logger.Info("Customer created in database", zap.String("name", model.Name))
 	return nil
 }
 

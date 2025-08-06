@@ -4,41 +4,44 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/vehicle"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type UpdateByIdVehicle struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	VehicleRepository  repository.VehicleRepository
+	CustomerRepository repository.CustomerRepository
+	Logger             interfaces.Logger
 }
 
 // FetchVehicleFromDB busca um vehicle específico do banco de dados
 func (uc *UpdateByIdVehicle) FetchVehicleFromDB(id uuid.UUID) (*models.Vehicle, error) {
-	var existingVehicle models.Vehicle
-	if err := uc.DB.Where("id = ?", id).First(&existingVehicle).Error; err != nil {
+	vehicle, err := uc.VehicleRepository.FindByID(id)
+	if err != nil {
 		uc.Logger.Error("Database error finding vehicle to update", zap.Error(err), zap.String("id", id.String()))
 		return nil, err
 	}
 
 	uc.Logger.Info("Found existing vehicle",
-		zap.String("id", existingVehicle.ID.String()),
-		zap.String("model", existingVehicle.Model),
-		zap.String("brand", existingVehicle.Brand),
-		zap.String("numberPlate", existingVehicle.NumberPlate))
+		zap.String("id", vehicle.ID.String()),
+		zap.String("model", vehicle.Model),
+		zap.String("brand", vehicle.Brand),
+		zap.String("numberPlate", vehicle.NumberPlate))
 
-	return &existingVehicle, nil
+	return vehicle, nil
 }
 
 // ValidateNumberPlateUniqueness verifica se a placa do vehicle é única (para update)
 func (uc *UpdateByIdVehicle) ValidateNumberPlateUniqueness(numberPlate string, vehicleID uuid.UUID) error {
-	var vehicleWithSamePlate models.Vehicle
-	if err := uc.DB.Where("number_plate = ? AND id != ?", numberPlate, vehicleID).First(&vehicleWithSamePlate).Error; err == nil {
+	vehicleWithSamePlate, err := uc.VehicleRepository.FindByNumberPlate(numberPlate)
+	if err == nil && vehicleWithSamePlate.ID != vehicleID {
 		uc.Logger.Error("Number plate already exists", zap.String("numberPlate", numberPlate))
 		return errors.New("number plate already exists")
-	} else if err != gorm.ErrRecordNotFound {
+	} else if err != nil && err != gorm.ErrRecordNotFound {
 		uc.Logger.Error("Error checking number plate uniqueness", zap.Error(err))
 		return err
 	}
@@ -54,8 +57,8 @@ func (uc *UpdateByIdVehicle) ValidateCustomerExists(customerID uuid.UUID) error 
 		return errors.New("customer ID is required")
 	}
 
-	var existingCustomer models.Customer
-	if err := uc.DB.Where("id = ?", customerID).First(&existingCustomer).Error; err != nil {
+	_, err := uc.CustomerRepository.FindByID(customerID)
+	if err != nil {
 		uc.Logger.Error("Customer not found", zap.String("customerID", customerID.String()))
 		return errors.New("customer not found")
 	}
@@ -83,15 +86,13 @@ func (uc *UpdateByIdVehicle) UpdateVehicleFields(existingVehicle *models.Vehicle
 
 // SaveVehicleToDB salva as alterações do vehicle no banco de dados
 func (uc *UpdateByIdVehicle) SaveVehicleToDB(vehicle *models.Vehicle) error {
-	result := uc.DB.Save(vehicle)
-	if result.Error != nil {
-		uc.Logger.Error("Database error updating vehicle", zap.Error(result.Error))
-		return result.Error
+	err := uc.VehicleRepository.Update(vehicle)
+	if err != nil {
+		uc.Logger.Error("Database error updating vehicle", zap.Error(err))
+		return err
 	}
 
-	uc.Logger.Info("Vehicle updated successfully",
-		zap.String("id", vehicle.ID.String()),
-		zap.Int64("rowsAffected", result.RowsAffected))
+	uc.Logger.Info("Vehicle updated successfully", zap.String("id", vehicle.ID.String()))
 	return nil
 }
 

@@ -2,21 +2,22 @@ package input
 
 import (
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/input"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type FindAllInputs struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	InputRepository repository.InputRepository
+	Logger          interfaces.Logger
 }
 
 // FetchInputsFromDB busca todos os inputs do banco de dados
 func (uc *FindAllInputs) FetchInputsFromDB() ([]models.Input, error) {
-	var inputs []models.Input
-	if err := uc.DB.Find(&inputs).Error; err != nil {
+	inputs, err := uc.InputRepository.FindAll()
+	if err != nil {
 		uc.Logger.Error("Database error finding all inputs", zap.Error(err))
 		return []models.Input{}, err
 	}

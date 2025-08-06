@@ -5,39 +5,41 @@ import (
 
 	"github.com/google/uuid"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/input"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type UpdateByIdInput struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	InputRepository repository.InputRepository
+	Logger          interfaces.Logger
 }
 
 // FetchInputFromDB busca um input específico do banco de dados
 func (uc *UpdateByIdInput) FetchInputFromDB(id uuid.UUID) (*models.Input, error) {
-	var existingInput models.Input
-	if err := uc.DB.Where("id = ?", id).First(&existingInput).Error; err != nil {
+	input, err := uc.InputRepository.FindByID(id)
+	if err != nil {
 		uc.Logger.Error("Database error finding input to update", zap.Error(err), zap.String("id", id.String()))
 		return nil, err
 	}
 
 	uc.Logger.Info("Found existing input",
-		zap.String("id", existingInput.ID.String()),
-		zap.String("name", existingInput.Name),
-		zap.String("inputType", existingInput.InputType))
+		zap.String("id", input.ID.String()),
+		zap.String("name", input.Name),
+		zap.String("inputType", input.InputType))
 
-	return &existingInput, nil
+	return input, nil
 }
 
 // ValidateInputNameUniqueness verifica se o nome do input é único (para update)
 func (uc *UpdateByIdInput) ValidateInputNameUniqueness(name string, inputID uuid.UUID) error {
-	var inputWithSameName models.Input
-	if err := uc.DB.Where("name = ? AND id != ?", name, inputID).First(&inputWithSameName).Error; err == nil {
+	inputWithSameName, err := uc.InputRepository.FindByName(name)
+	if err == nil && inputWithSameName.ID != inputID {
 		uc.Logger.Error("Input name already exists", zap.String("name", name))
 		return errors.New("input name already exists")
-	} else if err != gorm.ErrRecordNotFound {
+	} else if err != nil && err != gorm.ErrRecordNotFound {
 		uc.Logger.Error("Error checking input name uniqueness", zap.Error(err))
 		return err
 	}
@@ -77,15 +79,13 @@ func (uc *UpdateByIdInput) UpdateInputFields(existingInput *models.Input, entity
 
 // SaveInputToDB salva as alterações do input no banco de dados
 func (uc *UpdateByIdInput) SaveInputToDB(input *models.Input) error {
-	result := uc.DB.Save(input)
-	if result.Error != nil {
-		uc.Logger.Error("Database error updating input", zap.Error(result.Error))
-		return result.Error
+	err := uc.InputRepository.Update(input)
+	if err != nil {
+		uc.Logger.Error("Database error updating input", zap.Error(err))
+		return err
 	}
 
-	uc.Logger.Info("Input updated successfully",
-		zap.String("id", input.ID.String()),
-		zap.Int64("rowsAffected", result.RowsAffected))
+	uc.Logger.Info("Input updated successfully", zap.String("id", input.ID.String()))
 	return nil
 }
 

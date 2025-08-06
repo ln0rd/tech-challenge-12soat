@@ -4,33 +4,36 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/input"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type RemoveInputFromOrder struct {
-	DB                    *gorm.DB
-	Logger                *zap.Logger
+	OrderRepository       repository.OrderRepository
+	InputRepository       repository.InputRepository
+	OrderInputRepository  repository.OrderInputRepository
+	Logger                interfaces.Logger
 	IncreaseQuantityInput *input.IncreaseQuantityInput
 }
 
 // FetchOrderFromDB busca um order específico do banco de dados
 func (uc *RemoveInputFromOrder) FetchOrderFromDB(orderID uuid.UUID) (*models.Order, error) {
-	var order models.Order
-	if err := uc.DB.Where("id = ?", orderID).First(&order).Error; err != nil {
+	order, err := uc.OrderRepository.FindByID(orderID)
+	if err != nil {
 		uc.Logger.Error("Order not found", zap.String("orderID", orderID.String()))
 		return nil, errors.New("order not found")
 	}
 	uc.Logger.Info("Order found", zap.String("orderID", orderID.String()), zap.String("status", order.Status))
-	return &order, nil
+	return order, nil
 }
 
 // FetchInputFromDB busca um input específico do banco de dados
 func (uc *RemoveInputFromOrder) FetchInputFromDB(inputID uuid.UUID) (*models.Input, error) {
-	var input models.Input
-	if err := uc.DB.Where("id = ?", inputID).First(&input).Error; err != nil {
+	input, err := uc.InputRepository.FindByID(inputID)
+	if err != nil {
 		uc.Logger.Error("Input not found", zap.String("inputID", inputID.String()))
 		return nil, errors.New("input not found")
 	}
@@ -39,7 +42,7 @@ func (uc *RemoveInputFromOrder) FetchInputFromDB(inputID uuid.UUID) (*models.Inp
 		zap.String("name", input.Name),
 		zap.String("inputType", input.InputType),
 		zap.Int("currentQuantity", input.Quantity))
-	return &input, nil
+	return input, nil
 }
 
 // ValidateQuantityToRemove valida se a quantidade a remover é válida
@@ -53,23 +56,30 @@ func (uc *RemoveInputFromOrder) ValidateQuantityToRemove(quantityToRemove int) e
 
 // FetchOrderInputFromDB busca um order input específico do banco de dados
 func (uc *RemoveInputFromOrder) FetchOrderInputFromDB(orderID, inputID uuid.UUID) (*models.OrderInput, error) {
-	var orderInput models.OrderInput
-	if err := uc.DB.Where("order_id = ? AND input_id = ?", orderID, inputID).First(&orderInput).Error; err != nil {
-		uc.Logger.Error("Order input not found",
-			zap.String("orderID", orderID.String()),
-			zap.String("inputID", inputID.String()))
-		return nil, errors.New("order input not found")
+	// Busca todos os order inputs para este order
+	orderInputs, err := uc.OrderInputRepository.FindByOrderID(orderID)
+	if err != nil {
+		return nil, err
 	}
 
-	uc.Logger.Info("Order input found",
-		zap.String("orderInputID", orderInput.ID.String()),
-		zap.String("orderID", orderInput.OrderID.String()),
-		zap.String("inputID", orderInput.InputID.String()),
-		zap.Int("quantity", orderInput.Quantity),
-		zap.Float64("unitPrice", orderInput.UnitPrice),
-		zap.Float64("totalPrice", orderInput.TotalPrice))
+	// Procura por um order input com o input_id específico
+	for _, orderInput := range orderInputs {
+		if orderInput.InputID == inputID {
+			uc.Logger.Info("Order input found",
+				zap.String("orderInputID", orderInput.ID.String()),
+				zap.String("orderID", orderInput.OrderID.String()),
+				zap.String("inputID", orderInput.InputID.String()),
+				zap.Int("quantity", orderInput.Quantity),
+				zap.Float64("unitPrice", orderInput.UnitPrice),
+				zap.Float64("totalPrice", orderInput.TotalPrice))
+			return &orderInput, nil
+		}
+	}
 
-	return &orderInput, nil
+	uc.Logger.Error("Order input not found",
+		zap.String("orderID", orderID.String()),
+		zap.String("inputID", inputID.String()))
+	return nil, errors.New("order input not found")
 }
 
 // ValidateOrderInputQuantity valida se a quantidade no order input é válida
@@ -103,18 +113,18 @@ func (uc *RemoveInputFromOrder) IncreaseInputQuantity(input *models.Input, quant
 		return nil
 	}
 
-	uc.Logger.Info("Increasing input quantity (not service type)",
-		zap.String("inputID", input.ID.String()),
-		zap.String("name", input.Name),
-		zap.String("inputType", input.InputType))
-
+	// Usa o usecase de increase quantity
 	err := uc.IncreaseQuantityInput.Process(input.ID, quantityToRemove)
 	if err != nil {
 		uc.Logger.Error("Error increasing input quantity", zap.Error(err))
 		return err
 	}
 
-	uc.Logger.Info("Input quantity increased successfully")
+	uc.Logger.Info("Input quantity increased successfully",
+		zap.String("inputID", input.ID.String()),
+		zap.String("name", input.Name),
+		zap.Int("quantityIncreased", quantityToRemove))
+
 	return nil
 }
 
@@ -123,7 +133,8 @@ func (uc *RemoveInputFromOrder) CalculateNewOrderInputValues(orderInput *models.
 	newQuantity := orderInput.Quantity - quantityToRemove
 	newTotalPrice := float64(newQuantity) * orderInput.UnitPrice
 
-	uc.Logger.Info("Calculated new values",
+	uc.Logger.Info("Calculated new order input values",
+		zap.String("orderInputID", orderInput.ID.String()),
 		zap.Int("oldQuantity", orderInput.Quantity),
 		zap.Int("newQuantity", newQuantity),
 		zap.Float64("oldTotalPrice", orderInput.TotalPrice),
@@ -134,41 +145,51 @@ func (uc *RemoveInputFromOrder) CalculateNewOrderInputValues(orderInput *models.
 
 // RemoveOrderInputFromDB remove o order input do banco de dados
 func (uc *RemoveInputFromOrder) RemoveOrderInputFromDB(orderID, inputID uuid.UUID, quantityToRemove int) error {
-	result := uc.DB.Where("order_id = ? AND input_id = ?", orderID, inputID).Delete(&models.OrderInput{})
-	if result.Error != nil {
-		uc.Logger.Error("Database error removing order input", zap.Error(result.Error))
-		return result.Error
+	// Busca todos os order inputs para este order
+	orderInputs, err := uc.OrderInputRepository.FindByOrderID(orderID)
+	if err != nil {
+		return err
 	}
 
-	uc.Logger.Info("Order input removed successfully (quantity became 0)",
-		zap.String("orderID", orderID.String()),
-		zap.String("inputID", inputID.String()),
-		zap.Int("quantityReturned", quantityToRemove),
-		zap.Int64("rowsAffected", result.RowsAffected))
+	// Procura por um order input com o input_id específico
+	for _, orderInput := range orderInputs {
+		if orderInput.InputID == inputID {
+			err := uc.OrderInputRepository.Delete(orderInput.ID)
+			if err != nil {
+				uc.Logger.Error("Database error removing order input", zap.Error(err))
+				return err
+			}
 
-	return nil
+			uc.Logger.Info("Order input removed successfully",
+				zap.String("orderInputID", orderInput.ID.String()),
+				zap.String("orderID", orderID.String()),
+				zap.String("inputID", inputID.String()),
+				zap.Int("quantityRemoved", quantityToRemove))
+			return nil
+		}
+	}
+
+	return errors.New("order input not found")
 }
 
 // UpdateOrderInputInDB atualiza o order input no banco de dados
 func (uc *RemoveInputFromOrder) UpdateOrderInputInDB(orderInput *models.OrderInput, newQuantity int, newTotalPrice float64, quantityToRemove int) error {
-	result := uc.DB.Model(orderInput).Updates(map[string]interface{}{
-		"quantity":    newQuantity,
-		"total_price": newTotalPrice,
-	})
-	if result.Error != nil {
-		uc.Logger.Error("Database error updating order input", zap.Error(result.Error))
-		return result.Error
+	// Atualiza os valores
+	orderInput.Quantity = newQuantity
+	orderInput.TotalPrice = newTotalPrice
+
+	err := uc.OrderInputRepository.Update(orderInput)
+	if err != nil {
+		uc.Logger.Error("Database error updating order input", zap.Error(err))
+		return err
 	}
 
 	uc.Logger.Info("Order input updated successfully",
-		zap.String("orderID", orderInput.OrderID.String()),
-		zap.String("inputID", orderInput.InputID.String()),
-		zap.Int("oldQuantity", orderInput.Quantity),
+		zap.String("orderInputID", orderInput.ID.String()),
+		zap.Int("oldQuantity", orderInput.Quantity+quantityToRemove),
 		zap.Int("newQuantity", newQuantity),
-		zap.Float64("oldTotalPrice", orderInput.TotalPrice),
-		zap.Float64("newTotalPrice", newTotalPrice),
-		zap.Int("quantityReturned", quantityToRemove),
-		zap.Int64("rowsAffected", result.RowsAffected))
+		zap.Float64("oldTotalPrice", orderInput.TotalPrice+float64(quantityToRemove)*orderInput.UnitPrice),
+		zap.Float64("newTotalPrice", newTotalPrice))
 
 	return nil
 }

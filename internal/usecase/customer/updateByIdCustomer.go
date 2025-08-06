@@ -3,46 +3,54 @@ package customer
 import (
 	"github.com/google/uuid"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/costumer"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type UpdateByIdCustomer struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	CustomerRepository repository.CustomerRepository
+	Logger             interfaces.Logger
 }
 
-// FetchCustomerFromDB busca um customer específico do banco de dados
+// FetchCustomerFromDB busca um customer específico do banco
 func (uc *UpdateByIdCustomer) FetchCustomerFromDB(id uuid.UUID) (*models.Customer, error) {
-	var existingCustomer models.Customer
-	if err := uc.DB.Where("id = ?", id).First(&existingCustomer).Error; err != nil {
-		uc.Logger.Error("Database error finding customer to update", zap.Error(err), zap.String("id", id.String()))
+	customer, err := uc.CustomerRepository.FindByID(id)
+	if err != nil {
+		if err == gorm.ErrRecordNotFound {
+			uc.Logger.Error("Customer not found", zap.String("id", id.String()))
+			return nil, err
+		}
+		uc.Logger.Error("Database error fetching customer", zap.Error(err))
 		return nil, err
 	}
 
-	uc.Logger.Info("Found existing customer", zap.String("id", existingCustomer.ID.String()), zap.String("name", existingCustomer.Name))
-	return &existingCustomer, nil
+	uc.Logger.Info("Successfully fetched customer from database", zap.String("id", customer.ID.String()))
+	return customer, nil
 }
 
-// UpdateCustomerFields atualiza os campos do customer existente
+// UpdateCustomerFields atualiza os campos do customer
 func (uc *UpdateByIdCustomer) UpdateCustomerFields(existingCustomer *models.Customer, entity *domain.Customer) {
 	existingCustomer.Name = entity.Name
 	existingCustomer.DocumentNumber = entity.DocumentNumber
 	existingCustomer.CustomerType = entity.CustomerType
 
-	uc.Logger.Info("Updated customer fields", zap.String("name", existingCustomer.Name), zap.String("documentNumber", existingCustomer.DocumentNumber))
+	uc.Logger.Info("Customer fields updated",
+		zap.String("id", existingCustomer.ID.String()),
+		zap.String("name", existingCustomer.Name))
 }
 
-// SaveCustomerToDB salva as alterações do customer no banco de dados
+// SaveCustomerToDB salva as alterações do customer no banco
 func (uc *UpdateByIdCustomer) SaveCustomerToDB(customer *models.Customer) error {
-	result := uc.DB.Save(customer)
-	if result.Error != nil {
-		uc.Logger.Error("Database error updating customer", zap.Error(result.Error))
-		return result.Error
+	err := uc.CustomerRepository.Update(customer)
+	if err != nil {
+		uc.Logger.Error("Database error updating customer", zap.Error(err))
+		return err
 	}
 
-	uc.Logger.Info("Customer updated successfully", zap.String("id", customer.ID.String()), zap.Int64("rowsAffected", result.RowsAffected))
+	uc.Logger.Info("Customer updated in database", zap.String("id", customer.ID.String()))
 	return nil
 }
 

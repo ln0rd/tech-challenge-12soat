@@ -4,22 +4,25 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
-	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/vehicle"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
+	vehicleDomain "github.com/ln0rd/tech_challenge_12soat/internal/domain/vehicle"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
 )
 
 type CreateVehicle struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	VehicleRepository  repository.VehicleRepository
+	CustomerRepository repository.CustomerRepository
+	Logger             interfaces.Logger
 }
 
 // ValidateNumberPlateUniqueness verifica se a placa do vehicle é única
 func (uc *CreateVehicle) ValidateNumberPlateUniqueness(numberPlate string) error {
-	var existingVehicle models.Vehicle
-	if err := uc.DB.Where("number_plate = ?", numberPlate).First(&existingVehicle).Error; err == nil {
+	_, err := uc.VehicleRepository.FindByNumberPlate(numberPlate)
+	if err == nil {
 		uc.Logger.Error("Number plate already exists", zap.String("numberPlate", numberPlate))
 		return errors.New("number plate already exists")
 	} else if err != gorm.ErrRecordNotFound {
@@ -38,8 +41,8 @@ func (uc *CreateVehicle) ValidateCustomerExists(customerID uuid.UUID) error {
 		return errors.New("customer ID is required")
 	}
 
-	var existingCustomer models.Customer
-	if err := uc.DB.Where("id = ?", customerID).First(&existingCustomer).Error; err != nil {
+	_, err := uc.CustomerRepository.FindByID(customerID)
+	if err != nil {
 		uc.Logger.Error("Customer not found", zap.String("customerID", customerID.String()))
 		return errors.New("customer not found")
 	}
@@ -50,20 +53,19 @@ func (uc *CreateVehicle) ValidateCustomerExists(customerID uuid.UUID) error {
 
 // SaveVehicleToDB salva o vehicle no banco de dados
 func (uc *CreateVehicle) SaveVehicleToDB(model *models.Vehicle) error {
-	result := uc.DB.Create(model)
-	if result.Error != nil {
-		uc.Logger.Error("Database error creating vehicle", zap.Error(result.Error))
-		return result.Error
+	err := uc.VehicleRepository.Create(model)
+	if err != nil {
+		uc.Logger.Error("Database error creating vehicle", zap.Error(err))
+		return err
 	}
 
 	uc.Logger.Info("Vehicle created in database",
 		zap.String("id", model.ID.String()),
-		zap.String("numberPlate", model.NumberPlate),
-		zap.Int64("rowsAffected", result.RowsAffected))
+		zap.String("numberPlate", model.NumberPlate))
 	return nil
 }
 
-func (uc *CreateVehicle) Process(entity *domain.Vehicle) error {
+func (uc *CreateVehicle) Process(entity *vehicleDomain.Vehicle) error {
 	uc.Logger.Info("Processing vehicle creation",
 		zap.String("model", entity.Model),
 		zap.String("brand", entity.Brand),

@@ -3,21 +3,22 @@ package input
 import (
 	"github.com/google/uuid"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/input"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type FindByIdInput struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	InputRepository repository.InputRepository
+	Logger          interfaces.Logger
 }
 
 // FetchInputFromDB busca um input específico do banco de dados
 func (uc *FindByIdInput) FetchInputFromDB(id uuid.UUID) (*models.Input, error) {
-	var input models.Input
-	if err := uc.DB.Where("id = ?", id).First(&input).Error; err != nil {
+	input, err := uc.InputRepository.FindByID(id)
+	if err != nil {
 		uc.Logger.Error("Database error finding input by ID", zap.Error(err), zap.String("id", id.String()))
 		return nil, err
 	}
@@ -29,7 +30,7 @@ func (uc *FindByIdInput) FetchInputFromDB(id uuid.UUID) (*models.Input, error) {
 		zap.Float64("price", input.Price),
 		zap.Int("quantity", input.Quantity))
 
-	return &input, nil
+	return input, nil
 }
 
 func (uc *FindByIdInput) Process(id uuid.UUID) (*domain.Input, error) {

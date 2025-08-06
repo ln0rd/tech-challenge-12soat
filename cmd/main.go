@@ -4,12 +4,12 @@ import (
 	"log"
 	"os"
 
-	authInfra "github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/auth"
 	db "github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db"
+	loggerAdapter "github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/logger"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	routes "github.com/ln0rd/tech_challenge_12soat/internal/interface/http"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/http/controller"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/http/middleware"
-	authUseCase "github.com/ln0rd/tech_challenge_12soat/internal/usecase/auth"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/customer"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/input"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/order"
@@ -24,6 +24,9 @@ import (
 	"github.com/joho/godotenv"
 	"go.uber.org/zap"
 	"go.uber.org/zap/zapcore"
+
+	authInfra "github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/auth"
+	authUseCase "github.com/ln0rd/tech_challenge_12soat/internal/usecase/auth"
 )
 
 var (
@@ -88,11 +91,23 @@ func getCurrentDir() string {
 }
 
 func InitInstances() (*controller.CustomerController, *controller.HealthController, *controller.UserController, *controller.AuthController, *controller.VehicleController, *controller.InputController, *controller.OrderController, *middleware.AuthMiddleware, *middleware.AuthorizationMiddleware) {
-	createCustomerUC := &customer.CreateCustomer{DB: db.DB, Logger: logger}
-	findAllCustomerUC := &customer.FindAllCustomer{DB: db.DB, Logger: logger}
-	findByIdCustomerUC := &customer.FindByIdCustomer{DB: db.DB, Logger: logger}
-	deleteByIdCustomerUC := &customer.DeleteByIdCustomer{DB: db.DB, Logger: logger}
-	updateByIdCustomerUC := &customer.UpdateByIdCustomer{DB: db.DB, Logger: logger}
+	// Cria os repositories
+	customerRepository := repository.NewCustomerRepositoryAdapter(db.DB)
+	userRepository := repository.NewUserRepositoryAdapter(db.DB)
+	vehicleRepository := repository.NewVehicleRepositoryAdapter(db.DB)
+	inputRepository := repository.NewInputRepositoryAdapter(db.DB)
+	orderRepository := repository.NewOrderRepositoryAdapter(db.DB)
+	orderInputRepository := repository.NewOrderInputRepositoryAdapter(db.DB)
+	orderStatusHistoryRepository := repository.NewOrderStatusHistoryRepositoryAdapter(db.DB)
+
+	// Cria o logger adapter
+	loggerAdapter := loggerAdapter.NewZapAdapter(logger)
+
+	createCustomerUC := &customer.CreateCustomer{CustomerRepository: customerRepository, Logger: loggerAdapter}
+	findAllCustomerUC := &customer.FindAllCustomer{CustomerRepository: customerRepository, Logger: loggerAdapter}
+	findByIdCustomerUC := &customer.FindByIdCustomer{CustomerRepository: customerRepository, Logger: loggerAdapter}
+	deleteByIdCustomerUC := &customer.DeleteByIdCustomer{CustomerRepository: customerRepository, Logger: loggerAdapter}
+	updateByIdCustomerUC := &customer.UpdateByIdCustomer{CustomerRepository: customerRepository, Logger: loggerAdapter}
 
 	customerController := &controller.CustomerController{
 		Logger:             logger,
@@ -103,17 +118,18 @@ func InitInstances() (*controller.CustomerController, *controller.HealthControll
 		UpdateByIdCustomer: updateByIdCustomerUC,
 	}
 
-	createUserUC := &user.CreateUser{DB: db.DB, Logger: logger}
+	createUserUC := &user.CreateUser{UserRepository: userRepository, Logger: loggerAdapter}
 	userController := &controller.UserController{
 		Logger:     logger,
 		CreateUser: createUserUC,
 	}
 
-	createVehicleUC := &vehicle.CreateVehicle{DB: db.DB, Logger: logger}
-	findByIdVehicleUC := &vehicle.FindByIdVehicle{DB: db.DB, Logger: logger}
-	findByCustomerIdVehicleUC := &vehicle.FindByCustomerIdVehicle{DB: db.DB, Logger: logger}
-	updateByIdVehicleUC := &vehicle.UpdateByIdVehicle{DB: db.DB, Logger: logger}
-	deleteByIdVehicleUC := &vehicle.DeleteByIdVehicle{DB: db.DB, Logger: logger}
+	createVehicleUC := &vehicle.CreateVehicle{VehicleRepository: vehicleRepository, CustomerRepository: customerRepository, Logger: loggerAdapter}
+	findByIdVehicleUC := &vehicle.FindByIdVehicle{VehicleRepository: vehicleRepository, Logger: loggerAdapter}
+	findByCustomerIdVehicleUC := &vehicle.FindByCustomerIdVehicle{VehicleRepository: vehicleRepository, Logger: loggerAdapter}
+	updateByIdVehicleUC := &vehicle.UpdateByIdVehicle{VehicleRepository: vehicleRepository, CustomerRepository: customerRepository, Logger: loggerAdapter}
+	deleteByIdVehicleUC := &vehicle.DeleteByIdVehicle{VehicleRepository: vehicleRepository, Logger: loggerAdapter}
+
 	vehicleController := &controller.VehicleController{
 		Logger:                  logger,
 		CreateVehicle:           createVehicleUC,
@@ -123,60 +139,82 @@ func InitInstances() (*controller.CustomerController, *controller.HealthControll
 		DeleteByIdVehicle:       deleteByIdVehicleUC,
 	}
 
-	createInputUC := &input.CreateInput{DB: db.DB, Logger: logger}
-	findByIdInputUC := &input.FindByIdInput{DB: db.DB, Logger: logger}
-	findAllInputsUC := &input.FindAllInputs{DB: db.DB, Logger: logger}
-	updateByIdInputUC := &input.UpdateByIdInput{DB: db.DB, Logger: logger}
-	deleteByIdInputUC := &input.DeleteByIdInput{DB: db.DB, Logger: logger}
+	createInputUC := &input.CreateInput{InputRepository: inputRepository, Logger: loggerAdapter}
+	findAllInputsUC := &input.FindAllInputs{InputRepository: inputRepository, Logger: loggerAdapter}
+	findByIdInputUC := &input.FindByIdInput{InputRepository: inputRepository, Logger: loggerAdapter}
+	updateByIdInputUC := &input.UpdateByIdInput{InputRepository: inputRepository, Logger: loggerAdapter}
+	deleteByIdInputUC := &input.DeleteByIdInput{InputRepository: inputRepository, Logger: loggerAdapter}
+
 	inputController := &controller.InputController{
 		Logger:          logger,
 		CreateInput:     createInputUC,
-		FindByIdInput:   findByIdInputUC,
 		FindAllInputs:   findAllInputsUC,
+		FindByIdInput:   findByIdInputUC,
 		UpdateByIdInput: updateByIdInputUC,
 		DeleteByIdInput: deleteByIdInputUC,
 	}
 
-	// Order Status History usecase
-	manageOrderStatusHistoryUC := &order_status_history.ManageOrderStatusHistory{DB: db.DB, Logger: logger}
+	// Order usecases
+	statusHistoryManager := &order_status_history.ManageOrderStatusHistory{
+		OrderStatusHistoryRepository: orderStatusHistoryRepository,
+		Logger:                       loggerAdapter,
+	}
 
 	createOrderUC := &order.CreateOrder{
-		DB:                   db.DB,
-		Logger:               logger,
-		StatusHistoryManager: manageOrderStatusHistoryUC,
-	}
-	findOrderOverviewByIdUC := &order.FindOrderOverviewById{DB: db.DB, Logger: logger}
-
-	updateOrderStatusUC := &order.UpdateOrderStatus{
-		DB:                   db.DB,
-		Logger:               logger,
-		StatusHistoryManager: manageOrderStatusHistoryUC,
+		OrderRepository:      orderRepository,
+		CustomerRepository:   customerRepository,
+		VehicleRepository:    vehicleRepository,
+		Logger:               loggerAdapter,
+		StatusHistoryManager: statusHistoryManager,
 	}
 
-	// Order Input usecases
-	decreaseQuantityInputUC := &input.DecreaseQuantityInput{DB: db.DB, Logger: logger}
-	increaseQuantityInputUC := &input.IncreaseQuantityInput{DB: db.DB, Logger: logger}
+	findOrderOverviewByIdUC := &order.FindOrderOverviewById{
+		OrderRepository:              orderRepository,
+		VehicleRepository:            vehicleRepository,
+		OrderInputRepository:         orderInputRepository,
+		OrderStatusHistoryRepository: orderStatusHistoryRepository,
+		InputRepository:              inputRepository,
+		Logger:                       loggerAdapter,
+	}
 
+	// Input quantity usecases
+	increaseQuantityInputUC := &input.IncreaseQuantityInput{InputRepository: inputRepository, Logger: loggerAdapter}
+	decreaseQuantityInputUC := &input.DecreaseQuantityInput{InputRepository: inputRepository, Logger: loggerAdapter}
+
+	// Order input usecases
 	addInputToOrderUC := &order_input.AddInputToOrder{
-		DB:                    db.DB,
-		Logger:                logger,
+		OrderRepository:       orderRepository,
+		InputRepository:       inputRepository,
+		OrderInputRepository:  orderInputRepository,
+		Logger:                loggerAdapter,
 		DecreaseQuantityInput: decreaseQuantityInputUC,
 	}
 
 	removeInputFromOrderUC := &order_input.RemoveInputFromOrder{
-		DB:                    db.DB,
-		Logger:                logger,
+		OrderRepository:       orderRepository,
+		InputRepository:       inputRepository,
+		OrderInputRepository:  orderInputRepository,
+		Logger:                loggerAdapter,
 		IncreaseQuantityInput: increaseQuantityInputUC,
+	}
+
+	// Order status usecase
+	updateOrderStatusUC := &order.UpdateOrderStatus{
+		OrderRepository:      orderRepository,
+		Logger:               loggerAdapter,
+		StatusHistoryManager: statusHistoryManager,
 	}
 
 	orderController := &controller.OrderController{
 		Logger:                  logger,
 		CreateOrder:             createOrderUC,
 		FindOrderOverviewByIdUC: findOrderOverviewByIdUC,
-		UpdateOrderStatusUC:     updateOrderStatusUC,
 		AddInputToOrderUC:       addInputToOrderUC,
 		RemoveInputFromOrderUC:  removeInputFromOrderUC,
+		UpdateOrderStatusUC:     updateOrderStatusUC,
 	}
+
+	healthController := &controller.HealthController{}
 
 	// Auth components
 	authRepository := authInfra.NewAuthRepository(db.DB, logger)
@@ -191,8 +229,6 @@ func InitInstances() (*controller.CustomerController, *controller.HealthControll
 	// Auth middleware
 	authMiddleware := middleware.NewAuthMiddleware(jwtService, logger)
 	authzMiddleware := middleware.NewAuthorizationMiddleware(logger)
-
-	healthController := &controller.HealthController{}
 
 	return customerController, healthController, userController, authController, vehicleController, inputController, orderController, authMiddleware, authzMiddleware
 }

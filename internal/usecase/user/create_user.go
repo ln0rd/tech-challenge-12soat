@@ -3,8 +3,10 @@ package user
 import (
 	"errors"
 
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/user"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/bcrypt"
@@ -12,14 +14,14 @@ import (
 )
 
 type CreateUser struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	UserRepository repository.UserRepository
+	Logger         interfaces.Logger
 }
 
-// ValidateEmailUniqueness valida se o email já existe
+// ValidateEmailUniqueness verifica se o email é único
 func (uc *CreateUser) ValidateEmailUniqueness(email string) error {
-	var existingUser models.User
-	if err := uc.DB.Where("email = ?", email).First(&existingUser).Error; err == nil {
+	_, err := uc.UserRepository.FindByEmail(email)
+	if err == nil {
 		uc.Logger.Error("Email already exists", zap.String("email", email))
 		return errors.New("email already exists")
 	} else if err != gorm.ErrRecordNotFound {
@@ -45,15 +47,15 @@ func (uc *CreateUser) HashPassword(password string) (string, error) {
 
 // SaveUserToDB salva o user no banco de dados
 func (uc *CreateUser) SaveUserToDB(model *models.User) error {
-	result := uc.DB.Create(model)
-	if result.Error != nil {
-		uc.Logger.Error("Database error creating user", zap.Error(result.Error))
-		return result.Error
+	err := uc.UserRepository.Create(model)
+	if err != nil {
+		uc.Logger.Error("Database error creating user", zap.Error(err))
+		return err
 	}
 
 	uc.Logger.Info("User created in database",
-		zap.String("email", model.Email),
-		zap.Int64("rowsAffected", result.RowsAffected))
+		zap.String("id", model.ID.String()),
+		zap.String("email", model.Email))
 	return nil
 }
 

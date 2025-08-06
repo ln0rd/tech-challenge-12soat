@@ -4,20 +4,21 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type DecreaseQuantityInput struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	InputRepository repository.InputRepository
+	Logger          interfaces.Logger
 }
 
 // FetchInputFromDB busca um input específico do banco de dados
 func (uc *DecreaseQuantityInput) FetchInputFromDB(id uuid.UUID) (*models.Input, error) {
-	var input models.Input
-	if err := uc.DB.Where("id = ?", id).First(&input).Error; err != nil {
+	input, err := uc.InputRepository.FindByID(id)
+	if err != nil {
 		uc.Logger.Error("Input not found", zap.String("id", id.String()))
 		return nil, errors.New("input not found")
 	}
@@ -27,7 +28,7 @@ func (uc *DecreaseQuantityInput) FetchInputFromDB(id uuid.UUID) (*models.Input, 
 		zap.String("name", input.Name),
 		zap.Int("currentQuantity", input.Quantity))
 
-	return &input, nil
+	return input, nil
 }
 
 // ValidateQuantityToDecrease valida se a quantidade a diminuir é válida
@@ -60,18 +61,20 @@ func (uc *DecreaseQuantityInput) CalculateNewQuantity(currentQuantity, quantityT
 
 // UpdateInputQuantity atualiza a quantidade do input no banco de dados
 func (uc *DecreaseQuantityInput) UpdateInputQuantity(input *models.Input, newQuantity int) error {
-	result := uc.DB.Model(input).Update("quantity", newQuantity)
-	if result.Error != nil {
-		uc.Logger.Error("Database error updating input quantity", zap.Error(result.Error))
-		return result.Error
+	// Atualiza a quantidade no modelo
+	input.Quantity = newQuantity
+
+	err := uc.InputRepository.Update(input)
+	if err != nil {
+		uc.Logger.Error("Database error updating input quantity", zap.Error(err))
+		return err
 	}
 
 	uc.Logger.Info("Input quantity decreased successfully",
 		zap.String("id", input.ID.String()),
 		zap.String("name", input.Name),
 		zap.Int("oldQuantity", input.Quantity),
-		zap.Int("newQuantity", newQuantity),
-		zap.Int64("rowsAffected", result.RowsAffected))
+		zap.Int("newQuantity", newQuantity))
 
 	return nil
 }

@@ -2,30 +2,25 @@ package vehicle
 
 import (
 	"github.com/google/uuid"
-	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"go.uber.org/zap"
-	"gorm.io/gorm"
 )
 
 type DeleteByIdVehicle struct {
-	DB     *gorm.DB
-	Logger *zap.Logger
+	VehicleRepository repository.VehicleRepository
+	Logger            interfaces.Logger
 }
 
 // DeleteVehicleFromDB remove o vehicle do banco de dados
 func (uc *DeleteByIdVehicle) DeleteVehicleFromDB(id uuid.UUID) error {
-	result := uc.DB.Where("id = ?", id).Delete(&models.Vehicle{})
-	if result.Error != nil {
-		uc.Logger.Error("Database error deleting vehicle", zap.Error(result.Error), zap.String("id", id.String()))
-		return result.Error
+	err := uc.VehicleRepository.Delete(id)
+	if err != nil {
+		uc.Logger.Error("Database error deleting vehicle", zap.Error(err), zap.String("id", id.String()))
+		return err
 	}
 
-	if result.RowsAffected == 0 {
-		uc.Logger.Warn("No vehicle found to delete", zap.String("id", id.String()))
-		return gorm.ErrRecordNotFound
-	}
-
-	uc.Logger.Info("Vehicle deleted successfully", zap.String("id", id.String()), zap.Int64("rowsAffected", result.RowsAffected))
+	uc.Logger.Info("Vehicle deleted successfully", zap.String("id", id.String()))
 	return nil
 }
 
