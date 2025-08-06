@@ -1,17 +1,24 @@
 package logger
 
 import (
-	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"go.uber.org/zap"
 )
 
-// ZapAdapter adapta o zap.Logger para a interface Logger do domínio
+// Logger define a interface para logging
+type Logger interface {
+	Info(msg string, fields ...zap.Field)
+	Error(msg string, fields ...zap.Field)
+	Warn(msg string, fields ...zap.Field)
+	Debug(msg string, fields ...zap.Field)
+}
+
+// ZapAdapter implementa Logger usando zap.Logger
 type ZapAdapter struct {
 	logger *zap.Logger
 }
 
 // NewZapAdapter cria uma nova instância do adaptador
-func NewZapAdapter(logger *zap.Logger) domain.Logger {
+func NewZapAdapter(logger *zap.Logger) Logger {
 	return &ZapAdapter{
 		logger: logger,
 	}

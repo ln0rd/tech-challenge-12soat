@@ -3,9 +3,9 @@ package user
 import (
 	"errors"
 
-	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/user"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/logger"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
@@ -15,7 +15,7 @@ import (
 
 type CreateUser struct {
 	UserRepository repository.UserRepository
-	Logger         interfaces.Logger
+	Logger         logger.Logger
 }
 
 // ValidateEmailUniqueness verifica se o email é único

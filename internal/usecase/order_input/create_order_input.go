@@ -1,9 +1,9 @@
 package order_input
 
 import (
-	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/order_input"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/logger"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
@@ -11,7 +11,7 @@ import (
 
 type CreateOrderInput struct {
 	OrderInputRepository repository.OrderInputRepository
-	Logger               interfaces.Logger
+	Logger               logger.Logger
 }
 
 // SaveOrderInputToDB salva o order input no banco de dados

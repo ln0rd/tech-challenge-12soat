@@ -2,14 +2,14 @@ package vehicle
 
 import (
 	"github.com/google/uuid"
-	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/logger"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"go.uber.org/zap"
 )
 
 type DeleteByIdVehicle struct {
 	VehicleRepository repository.VehicleRepository
-	Logger            interfaces.Logger
+	Logger            logger.Logger
 }
 
 // DeleteVehicleFromDB remove o vehicle do banco de dados

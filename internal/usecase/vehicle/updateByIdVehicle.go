@@ -4,9 +4,9 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
-	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/vehicle"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/logger"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -15,7 +15,7 @@ import (
 type UpdateByIdVehicle struct {
 	VehicleRepository  repository.VehicleRepository
 	CustomerRepository repository.CustomerRepository
-	Logger             interfaces.Logger
+	Logger             logger.Logger
 }
 
 // FetchVehicleFromDB busca um vehicle específico do banco de dados

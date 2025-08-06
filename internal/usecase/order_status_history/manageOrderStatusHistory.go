@@ -5,8 +5,8 @@ import (
 	"time"
 
 	"github.com/google/uuid"
-	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/logger"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -14,7 +14,7 @@ import (
 
 type ManageOrderStatusHistory struct {
 	OrderStatusHistoryRepository repository.OrderStatusHistoryRepository
-	Logger                       interfaces.Logger
+	Logger                       logger.Logger
 }
 
 // IsFinalStatus verifica se o status é final

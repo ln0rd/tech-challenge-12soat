@@ -2,9 +2,9 @@ package vehicle
 
 import (
 	"github.com/google/uuid"
-	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/vehicle"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/logger"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
@@ -12,7 +12,7 @@ import (
 
 type FindByCustomerIdVehicle struct {
 	VehicleRepository repository.VehicleRepository
-	Logger            interfaces.Logger
+	Logger            logger.Logger
 }
 
 // FetchVehiclesFromDB busca vehicles por customer ID do banco de dados

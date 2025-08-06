@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/input"
-	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/logger"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
@@ -14,7 +14,7 @@ import (
 
 type CreateInput struct {
 	InputRepository repository.InputRepository
-	Logger          interfaces.Logger
+	Logger          logger.Logger
 }
 
 // ValidateInputNameUniqueness verifica se o nome do input é único

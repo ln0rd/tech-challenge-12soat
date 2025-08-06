@@ -5,9 +5,9 @@ import (
 	"fmt"
 
 	"github.com/google/uuid"
-	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/order"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/logger"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"go.uber.org/zap"
 )
@@ -18,7 +18,7 @@ type FindOrderOverviewById struct {
 	OrderInputRepository         repository.OrderInputRepository
 	OrderStatusHistoryRepository repository.OrderStatusHistoryRepository
 	InputRepository              repository.InputRepository
-	Logger                       interfaces.Logger
+	Logger                       logger.Logger
 }
 
 type OrderWithInputs struct {

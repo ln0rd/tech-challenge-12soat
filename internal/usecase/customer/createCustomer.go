@@ -2,8 +2,8 @@ package customer
 
 import (
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/costumer"
-	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/logger"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
@@ -11,7 +11,7 @@ import (
 
 type CreateCustomer struct {
 	CustomerRepository repository.CustomerRepository
-	Logger             interfaces.Logger
+	Logger             logger.Logger
 }
 
 // SaveCustomerToDB salva o customer no banco de dados

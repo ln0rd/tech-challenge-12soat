@@ -4,8 +4,8 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
-	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/logger"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/usecase/input"
 	"go.uber.org/zap"
@@ -15,7 +15,7 @@ type AddInputToOrder struct {
 	OrderRepository       repository.OrderRepository
 	InputRepository       repository.InputRepository
 	OrderInputRepository  repository.OrderInputRepository
-	Logger                interfaces.Logger
+	Logger                logger.Logger
 	DecreaseQuantityInput *input.DecreaseQuantityInput
 }
 

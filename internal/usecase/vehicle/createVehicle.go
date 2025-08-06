@@ -4,9 +4,9 @@ import (
 	"errors"
 
 	"github.com/google/uuid"
-	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	vehicleDomain "github.com/ln0rd/tech_challenge_12soat/internal/domain/vehicle"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/logger"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
@@ -16,7 +16,7 @@ import (
 type CreateVehicle struct {
 	VehicleRepository  repository.VehicleRepository
 	CustomerRepository repository.CustomerRepository
-	Logger             interfaces.Logger
+	Logger             logger.Logger
 }
 
 // ValidateNumberPlateUniqueness verifica se a placa do vehicle é única

@@ -2,7 +2,7 @@ package customer
 
 import (
 	"github.com/google/uuid"
-	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/logger"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"go.uber.org/zap"
 	"gorm.io/gorm"
@@ -10,7 +10,7 @@ import (
 
 type DeleteByIdCustomer struct {
 	CustomerRepository repository.CustomerRepository
-	Logger             interfaces.Logger
+	Logger             logger.Logger
 }
 
 // DeleteCustomerFromDB remove o customer do banco

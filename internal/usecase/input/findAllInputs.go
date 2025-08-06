@@ -2,8 +2,8 @@ package input
 
 import (
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/input"
-	interfaces "github.com/ln0rd/tech_challenge_12soat/internal/domain/interfaces"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/db/models"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/logger"
 	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/repository"
 	"github.com/ln0rd/tech_challenge_12soat/internal/interface/persistence"
 	"go.uber.org/zap"
@@ -11,7 +11,7 @@ import (
 
 type FindAllInputs struct {
 	InputRepository repository.InputRepository
-	Logger          interfaces.Logger
+	Logger          logger.Logger
 }
 
 // FetchInputsFromDB busca todos os inputs do banco de dados
