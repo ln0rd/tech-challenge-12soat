@@ -219,7 +219,7 @@ func InitInstances() (*controller.CustomerController, *controller.HealthControll
 	// Auth components
 	authRepository := authInfra.NewAuthRepository(db.DB, logger)
 	jwtService := authInfra.NewJWTService(logger)
-	loginUseCase := authUseCase.NewLoginUseCase(authRepository, jwtService, logger)
+	loginUseCase := authUseCase.NewLoginUseCase(authRepository, jwtService, loggerAdapter)
 
 	authController := &controller.AuthController{
 		Logger:       logger,

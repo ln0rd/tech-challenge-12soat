@@ -5,16 +5,17 @@ import (
 	"time"
 
 	domain "github.com/ln0rd/tech_challenge_12soat/internal/domain/auth"
+	"github.com/ln0rd/tech_challenge_12soat/internal/infrastructure/logger"
 	"go.uber.org/zap"
 )
 
 type LoginUseCase struct {
 	authRepository domain.AuthRepository
 	tokenService   domain.TokenService
-	logger         *zap.Logger
+	logger         logger.Logger
 }
 
-func NewLoginUseCase(authRepository domain.AuthRepository, tokenService domain.TokenService, logger *zap.Logger) *LoginUseCase {
+func NewLoginUseCase(authRepository domain.AuthRepository, tokenService domain.TokenService, logger logger.Logger) *LoginUseCase {
 	return &LoginUseCase{
 		authRepository: authRepository,
 		tokenService:   tokenService,
