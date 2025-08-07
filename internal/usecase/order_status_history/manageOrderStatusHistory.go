@@ -35,10 +35,12 @@ func (uc *ManageOrderStatusHistory) FetchCurrentStatusFromDB(orderID uuid.UUID) 
 		return nil, err
 	}
 
-	uc.Logger.Info("Current status found",
-		zap.String("orderID", orderID.String()),
-		zap.String("status", currentStatus.Status),
-		zap.Time("startedAt", currentStatus.StartedAt))
+	if currentStatus != nil {
+		uc.Logger.Info("Current status found",
+			zap.String("orderID", orderID.String()),
+			zap.String("status", currentStatus.Status),
+			zap.Time("startedAt", currentStatus.StartedAt))
+	}
 
 	return currentStatus, nil
 }
