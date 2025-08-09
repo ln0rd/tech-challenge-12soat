@@ -51,6 +51,15 @@ Para subir o SonarQube localmente com acesso via web em `http://localhost:9000`:
    ```
    make sonar-scan
    ```
+   
+   Ou usar o comando simples sem token (para desenvolvimento local):
+   ```
+   make sonar-scan
+   ```
+   
+   O comando `sonar-scan` automaticamente gera a cobertura de testes e relatórios de segurança antes de executar a análise.
+   
+   **Nota:** Para Security e Reliability, o SonarQube usa o `golangci-lint` com regras de segurança habilitadas (incluindo `gosec`).
 
 Senha padrão do sonarQube admin/admin;
 Sugestão de senha para testes no sonar: Senhaforte123@

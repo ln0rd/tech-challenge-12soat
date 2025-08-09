@@ -12,6 +12,14 @@ run:
 test:
 	go test ./...
 
+test-coverage:
+	go test -coverprofile=coverage.out -covermode=atomic ./...
+	go test -json ./... > test-report.json
+
+# Generate security and quality reports
+security-reports:
+	golangci-lint run --out-format json > golangci-lint-report.json || true
+
 lint:
 	golangci-lint run
 
@@ -45,7 +53,16 @@ sonar-init-token:
 	@echo "Open http://localhost:9000 (user: admin / password: admin)."
 	@echo "Create a token in your profile and export SONAR_TOKEN=your_token"
 
-# Run local analysis with sonar-scanner (requires SONAR_TOKEN and sonar-scanner installed)
-sonar-scan:
-	@if [ -z "$$SONAR_TOKEN" ]; then echo "SONAR_TOKEN not set. Export it first."; exit 1; fi
-	sonar-scanner -Dsonar.login=$$SONAR_TOKEN -Dsonar.host.url=http://localhost:9000
+# # Run local analysis with sonar-scanner (requires SONAR_TOKEN and sonar-scanner installed)
+# sonar-scan:
+# 	@if [ -z "$$SONAR_TOKEN" ]; then echo "SONAR_TOKEN not set. Export it first."; exit 1; fi
+# 	sonar-scanner -Dsonar.login=$$SONAR_TOKEN -Dsonar.host.url=http://localhost:9000
+
+# Simple sonar-scanner without token (for local development) - includes coverage
+sonar-scan: test-coverage security-reports
+	sonar-scanner \
+		-Dsonar.projectKey=tech-challenge-12soat \
+		-Dsonar.sources=. \
+		-Dsonar.host.url=http://localhost:9000 \
+		-Dsonar.go.coverage.reportPaths=coverage.out \
+		-Dsonar.go.tests.reportPaths=test-report.json

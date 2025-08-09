@@ -1,0 +1,6 @@
+projectKey=tech-challenge-12soat
+serverUrl=http://localhost:9000
+serverVersion=25.8.0.112029
+dashboardUrl=http://localhost:9000/dashboard?id=tech-challenge-12soat
+ceTaskId=bfddf351-52cc-4991-b430-1ffb82a72ce1
+ceTaskUrl=http://localhost:9000/api/ce/task?id=bfddf351-52cc-4991-b430-1ffb82a72ce1
