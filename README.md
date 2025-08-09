@@ -34,6 +34,28 @@ E na sequencia executa-lo
 ```
 make run-bin
 ```
+### SonarQube (Análise de Código)
+
+Para subir o SonarQube localmente com acesso via web em `http://localhost:9000`:
+
+1. Subir os serviços do SonarQube:
+   ```
+   make sonar-up
+   ```
+2. Acessar a interface web: `http://localhost:9000` (credenciais padrão: `admin` / `admin`). Ao logar pela primeira vez, será solicitado alterar a senha.
+3. Criar um token de usuário no seu perfil do SonarQube e exportá-lo localmente:
+   ```
+   export SONAR_TOKEN=your_token
+   ```
+4. Executar a análise local (requer `sonar-scanner` instalado):
+   ```
+   make sonar-scan
+   ```
+
+Senha padrão do sonarQube admin/admin;
+Sugestão de senha para testes no sonar: Senhaforte123@
+
+Arquivo de configuração `sonar-project.properties` já incluído na raiz do projeto.
 ## Estrutura Clean Architecture
 Seguindo a abordagem do Clean architecture o projeto de estrutura da seguinte forma:
 
