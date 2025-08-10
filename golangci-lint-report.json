@@ -1,0 +1,36 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<checkstyle version="5.0">
+  <file name="cmd/main.go">
+    <error column="19" line="47" message="Error return value of `logger.Sync` is not checked" severity="error" source="errcheck"></error>
+  </file>
+  <file name="internal/interface/http/controller/authController.go">
+    <error column="27" line="74" message="Error return value of `(*encoding/json.Encoder).Encode` is not checked" severity="error" source="errcheck"></error>
+  </file>
+  <file name="internal/interface/http/controller/customerController.go">
+    <error column="27" line="98" message="Error return value of `(*encoding/json.Encoder).Encode` is not checked" severity="error" source="errcheck"></error>
+    <error column="27" line="116" message="Error return value of `(*encoding/json.Encoder).Encode` is not checked" severity="error" source="errcheck"></error>
+  </file>
+  <file name="internal/interface/http/controller/orderController.go">
+    <error column="2" line="18" message="var `orderStatusRegex` is unused" severity="error" source="unused"></error>
+  </file>
+  <file name="internal/interface/http/middleware/auth.go">
+    <error column="32" line="63" message="SA1029: should not use built-in type string as key for value; define your own type to avoid collisions" severity="error" source="staticcheck"></error>
+  </file>
+  <file name="internal/usecase/customer/findByIdCustomer_test.go">
+    <error column="12" line="65" message="SA5011: possible nil pointer dereference" severity="error" source="staticcheck"></error>
+    <error column="5" line="61" message="SA5011(related information): this check suggests that the pointer can be nil" severity="error" source="staticcheck"></error>
+    <error column="12" line="267" message="SA5011: possible nil pointer dereference" severity="error" source="staticcheck"></error>
+    <error column="5" line="263" message="SA5011(related information): this check suggests that the pointer can be nil" severity="error" source="staticcheck"></error>
+  </file>
+  <file name="internal/usecase/customer/updateByIdCustomer_test.go">
+    <error column="12" line="375" message="SA5011: possible nil pointer dereference" severity="error" source="staticcheck"></error>
+    <error column="5" line="371" message="SA5011(related information): this check suggests that the pointer can be nil" severity="error" source="staticcheck"></error>
+  </file>
+  <file name="internal/usecase/order/createOrder.go">
+    <error column="28" line="124" message="Error return value of `uc.StartOrderStatusHistory` is not checked" severity="error" source="errcheck"></error>
+  </file>
+  <file name="internal/usecase/order/updateOrderStatus.go">
+    <error column="24" line="135" message="Error return value of `uc.UpdateStatusHistory` is not checked" severity="error" source="errcheck"></error>
+  </file>
+</checkstyle>

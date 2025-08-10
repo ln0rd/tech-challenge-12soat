@@ -1,0 +1,412 @@
+{
+	"Golang errors": {},
+	"Issues": [
+		{
+			"severity": "MEDIUM",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "676",
+				"url": "https://cwe.mitre.org/data/definitions/676.html"
+			},
+			"rule_id": "G114",
+			"details": "Use of net/http serve function that has no support for setting timeouts",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/cmd/main.go",
+			"code": "81: \n82: \tlog.Fatal(http.ListenAndServe(\":\"+httpPort, r))\n83: }\n",
+			"line": "82",
+			"column": "12",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/usecase/order/updateOrderStatus.go",
+			"code": "134: \t// Atualiza o histórico de status\n135: \tuc.UpdateStatusHistory(orderID, newStatus)\n136: \n",
+			"line": "135",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/usecase/order/createOrder.go",
+			"code": "123: \t// Inicia o histórico de status com o status inicial\n124: \tuc.StartOrderStatusHistory(model.ID, model.Status)\n125: \n",
+			"line": "124",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/vehicleController.go",
+			"code": "344: \tw.WriteHeader(http.StatusOK)\n345: \tjson.NewEncoder(w).Encode(map[string]string{\n346: \t\t\"message\": \"Vehicle deleted successfully\",\n347: \t\t\"id\":      id.String(),\n348: \t})\n349: }\n",
+			"line": "345-348",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/vehicleController.go",
+			"code": "307: \tw.WriteHeader(http.StatusOK)\n308: \tjson.NewEncoder(w).Encode(map[string]string{\n309: \t\t\"message\": \"Vehicle updated successfully\",\n310: \t\t\"id\":      entity.ID.String(),\n311: \t})\n312: }\n",
+			"line": "308-311",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/vehicleController.go",
+			"code": "210: \tw.WriteHeader(http.StatusOK)\n211: \tjson.NewEncoder(w).Encode(vehicles)\n212: }\n",
+			"line": "211",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/vehicleController.go",
+			"code": "180: \tw.WriteHeader(http.StatusOK)\n181: \tjson.NewEncoder(w).Encode(vehicle)\n182: }\n",
+			"line": "181",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/vehicleController.go",
+			"code": "145: \tw.WriteHeader(http.StatusCreated)\n146: \tjson.NewEncoder(w).Encode(map[string]string{\n147: \t\t\"message\": \"Vehicle created successfully\",\n148: \t\t\"id\":      entity.ID.String(),\n149: \t})\n150: }\n",
+			"line": "146-149",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/userController.go",
+			"code": "123: \tw.WriteHeader(http.StatusCreated)\n124: \tjson.NewEncoder(w).Encode(map[string]string{\"message\": \"User created successfully\"})\n125: }\n",
+			"line": "124",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/orderController.go",
+			"code": "489: \tw.WriteHeader(http.StatusOK)\n490: \tjson.NewEncoder(w).Encode(map[string]string{\n491: \t\t\"message\":  \"Order status updated successfully\",\n492: \t\t\"order_id\": orderID.String(),\n493: \t\t\"status\":   dto.Status,\n494: \t})\n495: }\n",
+			"line": "490-494",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/orderController.go",
+			"code": "424: \tw.WriteHeader(http.StatusOK)\n425: \tjson.NewEncoder(w).Encode(result)\n426: }\n",
+			"line": "425",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/orderController.go",
+			"code": "375: \tw.WriteHeader(http.StatusOK)\n376: \tjson.NewEncoder(w).Encode(map[string]string{\n377: \t\t\"message\":  \"Input removed from order successfully\",\n378: \t\t\"order_id\": orderID.String(),\n379: \t\t\"input_id\": inputID.String(),\n380: \t})\n381: }\n",
+			"line": "376-380",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/orderController.go",
+			"code": "270: \tw.WriteHeader(http.StatusCreated)\n271: \tjson.NewEncoder(w).Encode(map[string]string{\n272: \t\t\"message\":  \"Input added to order successfully\",\n273: \t\t\"order_id\": orderID.String(),\n274: \t\t\"input_id\": inputID.String(),\n275: \t})\n276: }\n",
+			"line": "271-275",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/orderController.go",
+			"code": "180: \tw.WriteHeader(http.StatusCreated)\n181: \tjson.NewEncoder(w).Encode(map[string]string{\n182: \t\t\"message\": \"Order created successfully\",\n183: \t\t\"id\":      entity.ID.String(),\n184: \t\t\"status\":  entity.Status,\n185: \t})\n186: }\n",
+			"line": "181-185",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/inputController.go",
+			"code": "325: \tw.WriteHeader(http.StatusOK)\n326: \tjson.NewEncoder(w).Encode(map[string]string{\n327: \t\t\"message\": \"Input deleted successfully\",\n328: \t\t\"id\":      id.String(),\n329: \t})\n330: }\n",
+			"line": "326-329",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/inputController.go",
+			"code": "288: \tw.WriteHeader(http.StatusOK)\n289: \tjson.NewEncoder(w).Encode(map[string]string{\n290: \t\t\"message\": \"Input updated successfully\",\n291: \t\t\"id\":      entity.ID.String(),\n292: \t})\n293: }\n",
+			"line": "289-292",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/inputController.go",
+			"code": "197: \tw.WriteHeader(http.StatusOK)\n198: \tjson.NewEncoder(w).Encode(inputs)\n199: }\n",
+			"line": "198",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/inputController.go",
+			"code": "179: \tw.WriteHeader(http.StatusOK)\n180: \tjson.NewEncoder(w).Encode(input)\n181: }\n",
+			"line": "180",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/inputController.go",
+			"code": "143: \tw.WriteHeader(http.StatusCreated)\n144: \tjson.NewEncoder(w).Encode(map[string]string{\n145: \t\t\"message\": \"Input created successfully\",\n146: \t\t\"id\":      entity.ID.String(),\n147: \t})\n148: }\n",
+			"line": "144-147",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/healthController.go",
+			"code": "11: \tw.WriteHeader(http.StatusOK)\n12: \tjson.NewEncoder(w).Encode(map[string]string{\"status\": \"ok\"})\n13: }\n",
+			"line": "12",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/customerController.go",
+			"code": "200: \tw.WriteHeader(http.StatusOK)\n201: \tjson.NewEncoder(w).Encode(map[string]string{\"message\": \"Customer updated successfully\"})\n202: }\n",
+			"line": "201",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/customerController.go",
+			"code": "143: \tw.WriteHeader(http.StatusOK)\n144: \tjson.NewEncoder(w).Encode(customer)\n145: }\n",
+			"line": "144",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/customerController.go",
+			"code": "115: \tw.WriteHeader(http.StatusOK)\n116: \tjson.NewEncoder(w).Encode(customers)\n117: }\n",
+			"line": "116",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/customerController.go",
+			"code": "97: \tw.WriteHeader(http.StatusCreated)\n98: \tjson.NewEncoder(w).Encode(map[string]string{\"message\": \"Customer created successfully\"})\n99: }\n",
+			"line": "98",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		},
+		{
+			"severity": "LOW",
+			"confidence": "HIGH",
+			"cwe": {
+				"id": "703",
+				"url": "https://cwe.mitre.org/data/definitions/703.html"
+			},
+			"rule_id": "G104",
+			"details": "Errors unhandled",
+			"file": "/Users/leo/Documents/fiap/tech-challenge-12soat/internal/interface/http/controller/authController.go",
+			"code": "73: \tw.WriteHeader(http.StatusOK)\n74: \tjson.NewEncoder(w).Encode(response)\n75: }\n",
+			"line": "74",
+			"column": "2",
+			"nosec": false,
+			"suppressions": null
+		}
+	],
+	"Stats": {
+		"files": 83,
+		"lines": 6964,
+		"nosec": 0,
+		"found": 25
+	},
+	"GosecVersion": "dev"
+}

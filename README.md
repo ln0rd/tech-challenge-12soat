@@ -8,6 +8,8 @@ Esse projeto tem como objetivo permitir aos clientes acompanhar em tempo real o 
 - **HTTP Framework**: [Gorilla Mux](https://github.com/gorilla/mux) 
 - **Enviroment Variables**: [godotenv](https://github.com/joho/godotenv)
 - **Logger**: [zap](https://pkg.go.dev/go.uber.org/zap)
+- **GolangCi**: [golangci](github.com/golangci/golangci-lint/cmd/golangci-lint@latest)
+- **GoSec**: [gosec](https://github.com/securego/gosec)
 
 ### Pré-requisitos
 - **Golang Versão 1.24.5**
