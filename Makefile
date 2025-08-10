@@ -19,7 +19,7 @@ test-coverage:
 # Generate security and quality reports
 security-reports:
 	PATH=$$PATH:~/go/bin golangci-lint run --out-format checkstyle > golangci-lint-report.json || true
-	PATH=$$PATH:~/go/bin gosec -fmt json -out gosec-report.json ./... || true
+	PATH=$$PATH:~/go/bin gosec -fmt sonarqube -out gosec-report.json ./... || true
 
 lint:
 	golangci-lint run

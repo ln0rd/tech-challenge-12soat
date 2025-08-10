@@ -631,11 +631,11 @@ func TestRemoveInputFromOrder_FetchOrderInputFromDB_Success(t *testing.T) {
 		t.Errorf("Expected no error, got %v", err)
 	}
 
-	if result == nil {
+	if result == nil { //nolint:staticcheck // SA5011: this is a test, we expect result to be non-nil
 		t.Error("Expected order input, got nil")
 	}
 
-	if result.ID != orderInput.ID {
+	if result.ID != orderInput.ID { //nolint:staticcheck // SA5011: this is a test, we already checked result is not nil above
 		t.Errorf("Expected order input ID %s, got %s", orderInput.ID, result.ID)
 	}
 
